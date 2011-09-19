@@ -2,6 +2,15 @@ rbbt-entities=/$PWD filter="*.rb *.rake Rakefile *.rdoc *.R *.sh *.js *.haml *.s
  bin=bin {
  }
  lib=lib {
+  rbbt=rbbt{
+   entity.rb
+   entity=entity{
+    gene.rb
+    protein.rb
+    genotype.rb
+    misc.rb
+   }
+  }
  }
  test=test {
   test_helper.rb
