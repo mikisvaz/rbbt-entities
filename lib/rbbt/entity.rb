@@ -9,8 +9,10 @@ module Entity
   def self.extended(base)
     base.extend Annotation unless Annotation === base
 
+    Entity.formats[base.to_s] = base
     base.module_eval do
       class << self
+        attr_accessor :template
         alias prev_entity_extended extended
       end
 

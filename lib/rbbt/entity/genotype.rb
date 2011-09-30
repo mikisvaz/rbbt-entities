@@ -2,6 +2,7 @@ require 'rbbt/entity'
 require 'rbbt/workflow'
 require 'rbbt/sources/organism'
 require 'rbbt/mutation/mutation_assessor'
+require 'rbbt/entity/protein'
 
 Workflow.require_workflow "Sequence"
 
@@ -16,6 +17,15 @@ module MutatedIsoform
       Protein.setup(self.collect{|mutation| mutation.split(":").first}, "Ensembl Protein ID", organism)
     else
       Protein.setup(self.split(":").first, "Ensembl Protein ID", organism)
+    end
+  end
+
+  def ensembl_protein_image_url
+    if Array === self
+      self.collect{|e| e.ensembl_protein_image_url}
+    else
+      ensembl_url = if organism == "Hsa" then "www.ensembl.org" else "#{organism.sub(/.*\//,'')}.archive.ensembl.org" end
+      "http://#{ensembl_url}/Homo_sapiens/Component/Transcript/Web/TranslationImage?db=core;p=#{protein};_rmd=d2a8;export=svg"
     end
   end
 
@@ -71,6 +81,7 @@ module MutatedIsoform
       end.compact
 
       tsv = MutationAssessor.chunked_predict(mutations)
+      return TSV.setup({}, :key_field => "Mutated Isoform", :fields => ["Func. Impact"]) if tsv.empty?
       tsv.add_field "Mutated Isoform" do |key, values|
         correspondance[key.split(" ")]
       end
@@ -142,7 +153,7 @@ module GenomicMutation
   self.format = "Genomic Mutation"
 
   def self2genes
-    Sequence.job(:genes_at_genomic_positions, name, :organism => organism, :positions => Array === self ? self : [self]).exec
+    Sequence.job(:genes_at_genomic_positions, name, :organism => organism, :positions => Array === self ? self : [self]).run
   end
 
   def genes
@@ -159,12 +170,17 @@ module GenomicMutation
 
   def damaging_mutations(options = {})
     damaged_isoforms = mutated_isoforms.damaged(options)
-    ddd self2mutated_isoforms
-    ddd self2mutated_isoforms.fields
     damaging_mutations = self2mutated_isoforms.select{|mutation, values|
       mutated_isoforms = values["Mutated Isoform"]
       (damaged_isoforms & mutated_isoforms).any?
     }.collect{|mutation, mutated_isoforms| mutation.dup}
     GenomicMutation.setup(damaging_mutations, name + '.damaging', organism)
+  end
+
+  def mutations_at_genes(genes)
+    genes = genes.to("Ensembl Gene ID").compact
+    s2g = self.self2genes 
+    subset = s2g.select("Ensembl Gene ID" => genes).keys.collect{|e| e.dup}
+    GenomicMutation.setup(subset, name + '.mutations_at_genes', organism)
   end
 end
