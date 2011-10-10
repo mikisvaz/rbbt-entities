@@ -164,8 +164,16 @@ module GenomicMutation
     Sequence.job(:mutated_isoforms_for_genomic_mutations, name, :organism => organism, :mutations => Array === self ? self : [self]).run
   end
 
+  def self2affected_exons
+    Sequence.job(:exons_at_genomic_positions, name, :organism => organism, :positions => Array === self ? self : [self]).run
+  end
+
   def mutated_isoforms
     MutatedIsoform.setup(self2mutated_isoforms.values.flatten, organism)
+  end
+
+  def affected_exons
+    self2affected_exons.values.flatten
   end
 
   def damaging_mutations(options = {})
@@ -178,7 +186,8 @@ module GenomicMutation
   end
 
   def mutations_at_genes(genes)
-    genes = genes.to("Ensembl Gene ID").compact
+    genes = genes.to("Ensembl Gene ID")
+    genes.compact! if Array === genes
     s2g = self.self2genes 
     subset = s2g.select("Ensembl Gene ID" => genes).keys.collect{|e| e.dup}
     GenomicMutation.setup(subset, name + '.mutations_at_genes', organism)
