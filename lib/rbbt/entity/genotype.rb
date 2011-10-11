@@ -81,7 +81,7 @@ module MutatedIsoform
       end.compact
 
       tsv = MutationAssessor.chunked_predict(mutations)
-      return TSV.setup({}, :key_field => "Mutated Isoform", :fields => ["Func. Impact"]) if tsv.empty?
+      return TSV.setup({}, :key_field => "Mutated Isoform", :fields => ["Func. Impact"]) if tsv.nil? or tsv.empty?
       tsv.add_field "Mutated Isoform" do |key, values|
         correspondance[key.split(" ")]
       end
