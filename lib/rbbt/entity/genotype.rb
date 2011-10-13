@@ -149,6 +149,7 @@ module GenomicMutation
   extend Entity
   self.annotation :name
   self.annotation :organism
+  self.annotation :watson
 
   self.format = "Genomic Mutation"
 
@@ -161,7 +162,7 @@ module GenomicMutation
   end
 
   def self2mutated_isoforms
-    Sequence.job(:mutated_isoforms_for_genomic_mutations, name, :organism => organism, :mutations => Array === self ? self : [self]).run
+    Sequence.job(:mutated_isoforms_for_genomic_mutations, name, :watson => watson, :organism => organism, :mutations => Array === self ? self : [self]).run
   end
 
   def self2affected_exons
