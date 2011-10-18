@@ -93,7 +93,7 @@ module MutatedIsoform
         correspondance[key.split(" ")].each do |mutation|
           new[mutation] = values
         end
-      end
+     end
 
       puts new
 
@@ -195,6 +195,7 @@ module GenomicMutation
   extend Entity
   self.annotation :jobname
   self.annotation :organism
+  self.annotation :watson
 
   self.format = "Genomic Mutation"
 
@@ -215,7 +216,7 @@ module GenomicMutation
   end
 
   def self2mutated_isoforms
-    Sequence.job(:mutated_isoforms_for_genomic_mutations, jobname, :organism => organism, :mutations => Array === self ? self : [self]).run
+    Sequence.job(:mutated_isoforms_for_genomic_mutations, jobname, :watson => watson, :organism => organism, :mutations => Array === self ? self : [self]).run
   end
 
   def self2affected_exons
