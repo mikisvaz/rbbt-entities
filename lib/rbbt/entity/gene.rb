@@ -17,6 +17,16 @@ module Gene
     to "Associated Gene Name"
   end
 
+  def long_name
+    if Array === self
+      to("Entrez Gene ID").collect{|id| gene = Entrez.get_gene(id); gene.nil? ? nil : gene.description}
+    else
+      gene = Entrez.get_gene(to("Entrez Gene ID"))
+      gene.nil? ? nil : gene.description
+    end
+  end
+
+
   def description
     if Array === self
       to("Entrez Gene ID").collect{|id| gene = Entrez.get_gene(id); gene.nil? ? nil : gene.summary}

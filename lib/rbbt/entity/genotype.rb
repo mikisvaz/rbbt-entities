@@ -76,20 +76,34 @@ module MutatedIsoform
         prot, change = mutation.split(":")
         next if uniprot.nil?
         uniprot_change = [uniprot, change]
-        correspondance[uniprot_change] = mutation
+        correspondance[uniprot_change] ||= []
+        correspondance[uniprot_change] << mutation
         uniprot_change
       end.compact
 
+      return TSV.setup({}, :key_field => "Mutated Isoform", :fields => ["Func. Impact"], :type => :list) if mutations.empty?
+
       tsv = MutationAssessor.chunked_predict(mutations)
-      return TSV.setup({}, :key_field => "Mutated Isoform", :fields => ["Func. Impact"]) if tsv.empty?
-      tsv.add_field "Mutated Isoform" do |key, values|
-        correspondance[key.split(" ")]
+
+      return TSV.setup({}, :key_field => "Mutated Isoform", :fields => ["Func. Impact"], :type => :list) if tsv.nil? or tsv.empty? 
+
+      new = TSV.setup({}, :key_field => "Mutated Isoform", :fields => ["Func. Impact"], :type => :list)
+
+      tsv.each do |key, values|
+        correspondance[key.split(" ")].each do |mutation|
+          new[mutation] = values
+        end
       end
-      tsv.reorder "Mutated Isoform", ["Func. Impact"]
+
+      puts new
+
+      new
     else
-      prot, change = mutation.split(":")
+      prot, change = self.split(":")
       uniprot = protein.to "UniProt/SwissProt ID"
-      mutations = [uniprot, change]
+      return TSV.setup({}, :key_field => "Mutated Isoform", :fields => ["Func. Impact"], :type => :list) if uniprot.nil? or type != "MISS-SENSE"
+
+      mutations = [[uniprot, change]]
 
       tsv = MutationAssessor.chunked_predict(mutations)
       tsv.add_field "Mutated Isoform" do |key, values|
@@ -143,17 +157,57 @@ module MutatedIsoform
 
     MutatedIsoform.setup(predicted, organism)
   end
+
+  def damaged?(options = {})
+    damaged = self.damaged
+    if Array === self
+      self.collect{|e| damaged.include? e}
+    else
+      damaged.include? self
+    end
+  end
+
+  def self2damage_score
+    early_nonsense = self.early_nonsense
+    early_frameshifts = self.early_frameshifts
+    predictions = self.self2mutation_assessor_prediction
+
+
+    scores = {}
+    levels = [:low, :medium, :high].collect{|v| v.to_s}
+    self.each{|im|
+      score = case
+              when early_nonsense.include?(im)
+                2
+              when early_frameshifts.include?(im)
+                2
+              else 
+                1 + (levels.index(predictions[im].to_s) || -1)
+              end
+      scores[im] = score
+    }
+
+    scores
+  end
 end
 
 module GenomicMutation
   extend Entity
-  self.annotation :name
+  self.annotation :jobname
   self.annotation :organism
 
   self.format = "Genomic Mutation"
 
+  def parts
+    self.split ":"
+  end
+
+  def score
+    parts[3]
+  end
+
   def self2genes
-    Sequence.job(:genes_at_genomic_positions, name, :organism => organism, :positions => Array === self ? self : [self]).run
+    Sequence.job(:genes_at_genomic_positions, jobname, :organism => organism, :positions => Array === self ? self : [self]).run
   end
 
   def genes
@@ -161,15 +215,27 @@ module GenomicMutation
   end
 
   def self2mutated_isoforms
-    Sequence.job(:mutated_isoforms_for_genomic_mutations, name, :organism => organism, :mutations => Array === self ? self : [self]).run
+    Sequence.job(:mutated_isoforms_for_genomic_mutations, jobname, :organism => organism, :mutations => Array === self ? self : [self]).run
   end
 
   def self2affected_exons
-    Sequence.job(:exons_at_genomic_positions, name, :organism => organism, :positions => Array === self ? self : [self]).run
+    Sequence.job(:exons_at_genomic_positions, jobname, :organism => organism, :positions => Array === self ? self : [self]).run
+  end
+
+  def self2exon_junctions
+    Sequence.job(:exon_junctions_at_genomic_positions, jobname, :organism => organism, :positions => Array === self ? self : [self]).run
   end
 
   def mutated_isoforms
     MutatedIsoform.setup(self2mutated_isoforms.values.flatten, organism)
+  end
+
+  def in_exon_junction?
+    if Array === self
+      self2exon_junctions.values_at(*self).collect{|v| v.nil? ? false : v.any?}
+    else
+      self2exon_junctions.include?(self)? self2exon_junctions[self].any? : false
+    end
   end
 
   def affected_exons
@@ -177,12 +243,17 @@ module GenomicMutation
   end
 
   def damaging_mutations(options = {})
-    damaged_isoforms = mutated_isoforms.damaged(options)
+    damaged_isoforms = mutated_isoforms.damaged?(options)
     damaging_mutations = self2mutated_isoforms.select{|mutation, values|
-      mutated_isoforms = values["Mutated Isoform"]
+      mutated_isoforms = values
       (damaged_isoforms & mutated_isoforms).any?
     }.collect{|mutation, mutated_isoforms| mutation.dup}
-    GenomicMutation.setup(damaging_mutations, name + '.damaging', organism)
+    damaging_mutations + self.self2exon_junctions.reject{|mut, list| list.nil? or list.empty?}.collect{|mut, list| mut}
+    GenomicMutation.setup(damaging_mutations, jobname + '.damaging', organism)
+  end
+
+  def damaging?
+    self.make_list.damaging_mutations.include? self
   end
 
   def mutations_at_genes(genes)
@@ -190,6 +261,6 @@ module GenomicMutation
     genes.compact! if Array === genes
     s2g = self.self2genes 
     subset = s2g.select("Ensembl Gene ID" => genes).keys.collect{|e| e.dup}
-    GenomicMutation.setup(subset, name + '.mutations_at_genes', organism)
+    GenomicMutation.setup(subset, (jobname || "Default") + '.mutations_at_genes', organism)
   end
 end
