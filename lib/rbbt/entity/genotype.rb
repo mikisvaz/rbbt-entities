@@ -30,7 +30,8 @@ module MutatedIsoform
   end
 
   ASTERISK = "*"[0]
-  def single_type
+  CONSECUENCES = %w(UTR SYNONYMOUS NOSTOP MISS-SENSE INDEL FRAMESHIFT NONSENSE)
+  def single_consecuence
     prot, change = self.split(":")
 
     case
@@ -51,20 +52,24 @@ module MutatedIsoform
     end
   end
 
-  def ary_type
-    self.collect{|mutation| mutation.single_type}
+  def ary_consecuence
+    self.collect{|mutation| mutation.single_consecuence}
   end
 
 
-  def type
-    Array === self ? ary_type : single_type
+  def consecuence
+    Array === self ? ary_consecuence : single_consecuence
   end
 
-  def filter(*types)
-    list = self.zip(type).select do |mutation, type|
-      types.include? type
-    end.collect{|mutation, type| mutation}
-
+  def filter(*consecuences)
+    if Array === self
+      list = self.zip(consecuence).select do |mutation, consecuence|
+        consecuences.include? consecuence
+      end.collect{|mutation, consecuence| mutation}
+    else
+      list = []
+      list << self if consecuences.include? consecuence
+    end
     MutatedIsoform.setup(list, organism)
   end
 
@@ -95,8 +100,6 @@ module MutatedIsoform
         end
      end
 
-      puts new
-
       new
     else
       prot, change = self.split(":")
@@ -120,6 +123,7 @@ module MutatedIsoform
       if protein_sequences.include? protein
         mutation.match(/(\d+)/)[1].to_f < protein_sequences[protein].length.to_f * 0.7
       else
+        Log.debug "Sequence for protein #{ protein } was not found"
         false
       end
     }
@@ -132,6 +136,7 @@ module MutatedIsoform
       if protein_sequences.include? protein
         mutation.match(/(\d+)/)[1].to_f < protein_sequences[protein].length.to_f * 0.7
       else
+        Log.debug "Sequence for protein #{ protein } was not found"
         false
       end
     }
@@ -181,8 +186,10 @@ module MutatedIsoform
                 2
               when early_frameshifts.include?(im)
                 2
+              when predictions.include?(im)
+                (levels.index(predictions[im].to_s) || 1)
               else 
-                1 + (levels.index(predictions[im].to_s) || -1)
+                0
               end
       scores[im] = score
     }
@@ -263,5 +270,34 @@ module GenomicMutation
     s2g = self.self2genes 
     subset = s2g.select("Ensembl Gene ID" => genes).keys.collect{|e| e.dup}
     GenomicMutation.setup(subset, (jobname || "Default") + '.mutations_at_genes', organism)
+  end
+
+  def self2consecuence
+    if Array === self
+      self2mutated_isoforms = self.self2mutated_isoforms
+      exon_junctions = self.self2exon_junctions
+      consecuences = TSV.setup({}, :key_field => "Genomic Mutation", :fields => ["Consecuence"], :type => :single)
+      self.each do |mutation|
+        mutated_isoforms = self2mutated_isoforms[mutation]
+        if not mutated_isoforms.nil? and mutated_isoforms.any?
+          value = mutated_isoforms.consecuence.collect{|c| MutatedIsoform::CONSECUENCES.index c}.max
+          consecuences[mutation] = MutatedIsoform::CONSECUENCES[value]
+        else
+          consecuences[mutation] = "NONE"
+        end
+        consecuences[mutation] += " EXON-JUNCTION" if exon_junctions.include? mutation and exon_junctions[mutation].any?
+      end
+      consecuences
+    else
+      self.make_list.self2consecuence
+    end
+  end
+
+  def consecuence
+    if Array === self
+      self2consecuence.values_at(*self).collect{|v| v.nil? ? "NONE" : MutatedIsoform::CONSECUENCES[v]}
+    else
+      self2consecuence[self] || "NONE"
+    end
   end
 end
