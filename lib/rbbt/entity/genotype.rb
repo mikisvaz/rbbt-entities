@@ -123,7 +123,7 @@ module MutatedIsoform
       if protein_sequences.include? protein
         mutation.match(/(\d+)/)[1].to_f < protein_sequences[protein].length.to_f * 0.7
       else
-        Log.debug "Sequence for protein #{ protein } was not found"
+        Log.debug "Sequence for protein was missing: #{protein}"
         false
       end
     }
@@ -136,7 +136,7 @@ module MutatedIsoform
       if protein_sequences.include? protein
         mutation.match(/(\d+)/)[1].to_f < protein_sequences[protein].length.to_f * 0.7
       else
-        Log.debug "Sequence for protein #{ protein } was not found"
+        Log.debug "Sequence for protein was missing: #{protein}"
         false
       end
     }
@@ -235,7 +235,9 @@ module GenomicMutation
   end
 
   def mutated_isoforms
-    MutatedIsoform.setup(self2mutated_isoforms.values.flatten, organism)
+    isoforms = self2mutated_isoforms.values.flatten
+    MutatedIsoform.setup(isoforms, organism)
+    isoforms
   end
 
   def in_exon_junction?
@@ -257,7 +259,7 @@ module GenomicMutation
       (damaged_isoforms & mutated_isoforms).any?
     }.collect{|mutation, mutated_isoforms| mutation.dup}
     damaging_mutations + self.self2exon_junctions.reject{|mut, list| list.nil? or list.empty?}.collect{|mut, list| mut}
-    GenomicMutation.setup(damaging_mutations, jobname + '.damaging', organism)
+    GenomicMutation.setup(damaging_mutations, jobname + '.damaging', organism, watson)
   end
 
   def damaging?
@@ -269,7 +271,23 @@ module GenomicMutation
     genes.compact! if Array === genes
     s2g = self.self2genes 
     subset = s2g.select("Ensembl Gene ID" => genes).keys.collect{|e| e.dup}
-    GenomicMutation.setup(subset, (jobname || "Default") + '.mutations_at_genes', organism)
+    GenomicMutation.setup(subset, (jobname || "Default") + '.mutations_at_genes', organism, watson)
+  end
+
+  def self2damage_score
+    if Array === self
+      isoform_mutation_damage = self.mutated_isoforms.self2damage_score
+
+      damage = TSV.setup({}, :key_field => "Ensembl Gene ID", :fields => ["Damage Score"], :type => :single, :cast => :to_f)
+      self2mutated_isoforms.each{|gene, isoforms| 
+        next if isoforms.empty?
+        score = [isoform_mutation_damage.values_at(*isoforms).max, (gene.in_exon_junction? ? 2 : 0)].max
+        damage[gene] = [damage[gene] || 0, score].max
+      }
+      damage
+    else
+      self.make_list.self2damage_score[self]
+    end
   end
 
   def self2consecuence
