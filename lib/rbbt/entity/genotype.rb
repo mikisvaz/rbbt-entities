@@ -88,7 +88,7 @@ module MutatedIsoform
 
       return TSV.setup({}, :key_field => "Mutated Isoform", :fields => ["Func. Impact"], :type => :list) if mutations.empty?
 
-      tsv = MutationAssessor.chunked_predict(mutations)
+      tsv = MutationAssessor.chunked_predict(mutations.sort)
 
       return TSV.setup({}, :key_field => "Mutated Isoform", :fields => ["Func. Impact"], :type => :list) if tsv.nil? or tsv.empty? 
 
@@ -127,6 +127,15 @@ module MutatedIsoform
         false
       end
     }
+  end
+
+  def length
+    protein_sequences = Organism.protein_sequence(organism).tsv :persist => true, :type => :single
+    if Array === self
+      protein_sequences.values_at(*self.collect{|isoform_mutation|protein, mutation = isoform_mutation.split ":"; protein}).collect{|seq| seq.nil? ? 0 : seq.length}
+    else
+      self.make_list.length.first
+    end
   end
 
   def early_frameshifts
@@ -219,7 +228,7 @@ module GenomicMutation
   end
 
   def genes
-    Gene.setup(self2genes.values.flatten.uniq, "Ensembl Gene ID", organism)
+    Gene.setup(self2genes.values_at(*self).flatten.uniq, "Ensembl Gene ID", organism)
   end
 
   def self2mutated_isoforms

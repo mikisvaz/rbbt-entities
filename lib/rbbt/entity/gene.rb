@@ -87,6 +87,51 @@ module Gene
     end
   end
 
+  def self2transcripts
+    if Array === self
+      gene_transcripts = Organism.gene_transcripts(organism).tsv :persit => true
+      gene_transcripts.select self.to "Ensembl Gene ID"
+    else
+      self.make_list.self2transcripts[self.to "Ensembl Gene ID"]
+    end
+  end
+
+  def self2max_protein_length
+    if Array === self
+      self2transcripts = self.self2transcripts
+      protein_sequence = Organism.protein_sequence(organism).tsv :persist => true
+      transcript_proteins = Organism.transcripts(organism).tsv :fields => ["Ensembl Protein ID"], :type => :single, :persist => true
+      
+      Misc.process_to_hash(self.to "Ensembl Gene ID") do |list|
+        self2transcripts.values_at(*list).collect{|trans| 
+          proteins = transcript_proteins.values_at(*trans).compact
+          protein_sequence.values_at(*proteins).collect{|seq| 
+           seq.nil? ? 0 : seq.length
+          }.max
+        }
+      end
+    else
+      self.make_list.self2max_protein_length[self.to "Ensembl Gene ID"]
+    end
+  end
+
+  def self2max_transcript_length
+    if Array === self
+      self2transcripts = self.self2transcripts
+      transcript_sequence = Organism.transcript_sequence(organism).tsv
+      
+      Misc.process_to_hash(self.to "Ensembl Gene ID") do |list|
+        self2transcripts.values_at(*list).collect{|trans| 
+          transcript_sequence.values_at(*trans).collect{|seq| 
+           seq.nil? ? 0 : seq.length
+          }.max
+        }
+      end
+    else
+      self.make_list.self2max_transcript_length[self.to "Ensembl Gene ID"]
+    end
+  end
+
 end
 
 module Transcript
@@ -110,3 +155,4 @@ module Transcript
     end
   end
 end
+
