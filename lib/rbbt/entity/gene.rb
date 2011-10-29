@@ -2,6 +2,7 @@ require 'rbbt/entity'
 require 'rbbt/workflow'
 require 'rbbt/sources/organism'
 require 'rbbt/sources/entrez'
+require 'rbbt/entity/protein'
 
 Workflow.require_workflow "Translation"
 
@@ -11,60 +12,81 @@ module Gene
   self.annotation :format
   self.annotation :organism
 
-  self.format = Organism::Hsa.identifiers.all_fields
+  self.format = Organism::Hsa.identifiers.all_fields - ["Ensembl Protein ID", "Ensembl Transcript ID"]
+
+  property :to! => :array2single do |new_format|
+    return self if format == new_format
+    Gene.setup(Translation.job(:tsv_translate, "", :organism => organism, :genes => self, :format => new_format).exec.values_at(*self), new_format, organism)
+  end
+
+  property :to => :array2single do |new_format|
+    return self if format == new_format
+    to!(new_format).collect!{|v| v.nil? ? nil : v.first}
+  end
+
+  def ensembl
+    to "Ensembl Gene ID"
+  end
 
   def name
     to "Associated Gene Name"
   end
 
-  def long_name
-    if Array === self
-      to("Entrez Gene ID").collect{|id| gene = Entrez.get_gene(id); gene.nil? ? nil : gene.description}
-    else
-      gene = Entrez.get_gene(to("Entrez Gene ID"))
-      gene.nil? ? nil : gene.description
-    end
+  property :long_name => :single2array do
+    gene = Entrez.get_gene(to("Entrez Gene ID"))
+    gene.nil? ? nil : gene.description.flatten.first
   end
 
-
-  def description
-    if Array === self
-      to("Entrez Gene ID").collect{|id| gene = Entrez.get_gene(id); gene.nil? ? nil : gene.summary}
-    else
-      gene = Entrez.get_gene(to("Entrez Gene ID"))
-      gene.nil? ? nil : gene.summary
-    end
+  property :description => :single2array do
+    gene = Entrez.get_gene(to("Entrez Gene ID"))
+    gene.nil? ? nil : gene.summary.flatten.first
   end
 
-  def to!(new_format)
-    if Array === self
-      Gene.setup(Translation.job(:tsv_translate, "", :organism => organism, :genes => self, :format => new_format).exec.values_at(*self), new_format, organism)
-    else
-      Gene.setup(Translation.job(:tsv_translate, "", :organism => organism, :genes => [self], :format => new_format).exec[self], new_format, organism)
-    end
+  property :transcripts => :array2single do
+    gene_transcripts = Organism.gene_transcripts(organism).tsv :persist => true
+    gene_transcripts.unnamed = true
+    res = gene_transcripts.values_at(*self.ensembl)
+    res.each{|l| Transcript.setup(l, "Ensembl Transcript ID", organism)}
+    res
   end
 
-  def to(new_format)
-    return self if format == new_format
-    if Array === self
-      to!(new_format).collect!{|v| v.nil? ? nil : v.first}
-    else
-      v = to!(new_format)
-      v.nil? ? nil : v.first
-    end
+  property :proteins  => :array2single do
+    @proteins ||= begin
+                    transcripts = self.transcripts
+                    all_transcripts = Transcript.setup(transcripts.flatten, "Ensembl Transcript ID", organism)
+                    transcript2protein = nil
+
+                    transcript2protein = Misc.process_to_hash(all_transcripts){|list|
+                      list.protein
+                    }
+
+                    res = nil
+                    res = transcripts.collect{|list|
+                      Protein.setup(transcript2protein.values_at(*list), "Ensembl Protein ID", organism)
+                    }
+
+                    res.each{|l| 
+                    }
+                    res
+                  end
   end
 
-  def self2pfam
-    index = Organism.gene_pfam(organism).tsv :type => :flat, :persist => true
-    if Array === self
-      index.values_at(*self).flatten
-    else
-      index[self]
-    end
+  property :max_transcript_length => :array2single do
+    transcripts.collect{|list| list.sequence_length.compact.max}
   end
 
-  def chromosome
+  property :max_protein_length => :array2single do
+    @max_protein_length ||= begin
+                              proteins = self.proteins
+                              all_proteins = Protein.setup(proteins.flatten, "Ensembl Protein ID", organism)
+                              lengths = Misc.process_to_hash(all_proteins){|list| list.sequence_length}
+                              proteins.collect{|list| lengths.values_at(*list).compact.max}
+                            end
+  end
+
+  property :chromosome => :array2single do
     chr = Organism.gene_positions(organism).tsv :fields => ["Chromosome Name"], :type => :single, :persist => true
+    chr.unnamed = true
     if Array === self
       to("Ensembl Gene ID").collect do |gene|
         chr[gene]
@@ -74,61 +96,11 @@ module Gene
     end
   end
 
-  def range
+  property :range => :array2single do
     pos = Organism.gene_positions(organism).tsv :fields => ["Gene Start", "Gene End"], :type => :list, :persist => true, :cast => :to_i
-    if Array === self
-      to("Ensembl Gene ID").collect do |gene|
-        next if not pos.include? gene
-        Range.new *pos[gene]
-      end
-    else
-      return nil if not pos.include? to("Ensembl Gene ID")
-      Range.new *pos[to("Ensembl Gene ID")]
-    end
-  end
-
-  def self2transcripts
-    if Array === self
-      gene_transcripts = Organism.gene_transcripts(organism).tsv :persit => true
-      gene_transcripts.select self.to "Ensembl Gene ID"
-    else
-      self.make_list.self2transcripts[self.to "Ensembl Gene ID"]
-    end
-  end
-
-  def self2max_protein_length
-    if Array === self
-      self2transcripts = self.self2transcripts
-      protein_sequence = Organism.protein_sequence(organism).tsv :persist => true
-      transcript_proteins = Organism.transcripts(organism).tsv :fields => ["Ensembl Protein ID"], :type => :single, :persist => true
-      
-      Misc.process_to_hash(self.to "Ensembl Gene ID") do |list|
-        self2transcripts.values_at(*list).collect{|trans| 
-          proteins = transcript_proteins.values_at(*trans).compact
-          protein_sequence.values_at(*proteins).collect{|seq| 
-           seq.nil? ? 0 : seq.length
-          }.max
-        }
-      end
-    else
-      self.make_list.self2max_protein_length[self.to "Ensembl Gene ID"]
-    end
-  end
-
-  def self2max_transcript_length
-    if Array === self
-      self2transcripts = self.self2transcripts
-      transcript_sequence = Organism.transcript_sequence(organism).tsv
-      
-      Misc.process_to_hash(self.to "Ensembl Gene ID") do |list|
-        self2transcripts.values_at(*list).collect{|trans| 
-          transcript_sequence.values_at(*trans).collect{|seq| 
-           seq.nil? ? 0 : seq.length
-          }.max
-        }
-      end
-    else
-      self.make_list.self2max_transcript_length[self.to "Ensembl Gene ID"]
+    to("Ensembl Gene ID").collect do |gene|
+      next if not pos.include? gene
+      Range.new *pos[gene]
     end
   end
 
@@ -137,22 +109,45 @@ end
 module Transcript
   extend Entity
 
-  def to!(new_format)
-    if Array === self
-      Gene.setup(Translation.job(:tsv_probe_translate, "", :organism => organism, :genes => self, :format => new_format).exec.values_at(*self), new_format, organism)
-    else
-      Gene.setup(Translation.job(:tsv_probe_translate, "", :organism => organism, :genes => [self], :format => new_format).exec[self], new_format, organism)
-    end
+  self.annotation :format
+  self.annotation :organism
+
+  self.format = "Ensembl Transcript ID"
+
+  property :to! => :array2single do |new_format|
+    return self if format == new_format
+    Gene.setup(Translation.job(:tsv_probe_translate, "", :organism => organism, :genes => self, :format => new_format).exec.values_at(*self), new_format, organism)
   end
 
-  def to(new_format)
+  property :to => :array2single do |new_format|
     return self if format == new_format
-    if Array === self
-      to!(new_format).collect{|v| v.nil? ? nil : v.first}
-    else
-      v = to!(new_format)
-      v.nil? ? nil : v.first
-    end
+    to!(new_format).collect!{|v| v.nil? ? nil : v.first}
+  end
+
+  def ensembl
+    to "Ensembl Transcript ID"
+  end
+
+
+  property :sequence => :array2single do
+    transcript_sequence = Organism.transcript_sequence(organism).tsv :persist => true
+    transcript_sequence.unnamed = true
+    transcript_sequence.values_at *self.ensembl
+  end
+
+  property :sequence_length => :array2single do
+    sequence.collect{|s|
+      s.nil? ? nil : s.length
+    }
+  end
+
+  property :protein  => :array2single do
+    transcript_protein = Organism.transcripts(organism).tsv :single, :persist => true, :fields => ["Ensembl Protein ID"]
+    transcript_protein.unnamed = true
+
+    res = transcript_protein.values_at(*self.ensembl)
+    Protein.setup(res, "Ensembl Protein ID", organism)
+    res
   end
 end
 

@@ -3,6 +3,7 @@ require 'rbbt/workflow'
 require 'rbbt/sources/organism'
 require 'rbbt/statistics/hypergeometric'
 require 'rbbt/network/paths'
+require 'rbbt/entity/gene'
 
 Workflow.require_workflow "Translation"
 
@@ -14,17 +15,42 @@ module Protein
   self.annotation :format
   self.annotation :organism
 
-  def gene
-    Gene.setup(to("Ensembl Protein ID"), "Ensembl Protein ID", organism)
+  self.format = "Ensembl Protein ID"
+
+  def ensembl
+    to "Ensembl Protein ID"
   end
 
-  def to(new_format)
+  property :to! => :array2single do |new_format|
     return self if format == new_format
-    if Array === self
-      Protein.setup(Translation.job(:translate_protein, "", :organism => organism, :proteins => self, :format => new_format).exec, new_format, organism)
-    else
-      Protein.setup(Translation.job(:translate_protein, "", :organism => organism, :proteins => [self], :format => new_format).exec.first, new_format, organism)
-    end
+    Protein.setup(Translation.job(:translate_protein, "", :organism => organism, :proteins => self, :format => new_format).exec, new_format, organism)
+  end
+
+  property :to => :array2single do |new_format|
+    return self if format == new_format
+    to!(new_format).collect!{|v| v.nil? ? nil : v.first}
+  end
+
+  property :gene do
+    Gene.setup(to("Ensembl Protein ID").clean_annotations, "Ensembl Protein ID", organism)
+  end
+
+  property :pfam => :array2single do
+    Organism.gene_pfam(organism).tsv :flat, :persist => true
+    pfam = index.values_at(*self).flatten
+    Pfam.setup pfam
+  end
+
+  property :sequence => :array2single do
+    @protein_sequence ||= begin
+                            protein_sequence = Organism.protein_sequence(organism).tsv :persist => true
+                            protein_sequence.unnamed = true
+                            protein_sequence.values_at(*self.ensembl)
+                          end
+  end
+
+  property :sequence_length => :array2single do
+    sequence.collect{|seq| seq.nil? ? nil : seq.length}
   end
 end
 
