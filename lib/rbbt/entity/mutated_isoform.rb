@@ -137,5 +137,3 @@ module MutatedIsoform
   end
 
 end
-
-puts MutatedIsoform.setup("ENSP00000263253:L1160P", "Hsa/jun2011").marked_svg
