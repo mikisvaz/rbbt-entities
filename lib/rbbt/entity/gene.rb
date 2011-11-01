@@ -3,6 +3,7 @@ require 'rbbt/workflow'
 require 'rbbt/sources/organism'
 require 'rbbt/sources/entrez'
 require 'rbbt/entity/protein'
+require 'rbbt/entity/pmid'
 
 Workflow.require_workflow "Translation"
 
@@ -28,8 +29,23 @@ module Gene
     to "Ensembl Gene ID"
   end
 
+  def entrez
+    to "Entrez Gene ID"
+  end
+
+
   def name
     to "Associated Gene Name"
+  end
+
+  property :chr_start => :array2single do
+    @chr_start = begin
+                   Organism.gene_positions(organism).tsv(:persist => true, :type => :single, :cast => :to_i, :fields => ["Gene Start"]).values_at *self
+                 end
+  end
+
+  property :go_bp_terms => :array2single do
+    @go_bp_terms ||= Organism.gene_go_bp(organism).tsv(:persist => true, :key_field => "Ensembl Gene ID", :fields => ["GO ID"], :type => :flat).values_at *self.ensembl
   end
 
   property :long_name => :single2array do
@@ -102,6 +118,12 @@ module Gene
       next if not pos.include? gene
       Range.new *pos[gene]
     end
+  end
+
+  property :articles => :array2single do
+    @articles ||= begin
+                    PMID.setup(Organism.gene_pmids(organism).tsv(:persist => true, :fields => ["PMID"], :type => :flat).values_at *self.entrez)
+                  end 
   end
 
 end

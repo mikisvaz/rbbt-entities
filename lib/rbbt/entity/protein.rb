@@ -21,6 +21,11 @@ module Protein
     to "Ensembl Protein ID"
   end
 
+  property :ensembl_protein_image_url => :single2array do
+    ensembl_url = if organism == "Hsa" then "www.ensembl.org" else "#{organism.sub(/.*\//,'')}.archive.ensembl.org" end
+    "http://#{ensembl_url}/Homo_sapiens/Component/Transcript/Web/TranslationImage?db=core;p=#{ensembl};_rmd=d2a8;export=svg"
+  end
+
   property :to! => :array2single do |new_format|
     return self if format == new_format
     Protein.setup(Translation.job(:translate_protein, "", :organism => organism, :proteins => self, :format => new_format).exec, new_format, organism)

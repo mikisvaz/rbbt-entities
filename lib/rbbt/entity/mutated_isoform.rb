@@ -4,6 +4,7 @@ require 'rbbt/sources/organism'
 require 'rbbt/mutation/mutation_assessor'
 require 'rbbt/entity/protein'
 require 'rbbt/entity/gene'
+require 'nokogiri'
 
 module MutatedIsoform
   extend Entity
@@ -34,6 +35,25 @@ module MutatedIsoform
   property :ensembl_protein_image_url => :single2array do
     ensembl_url = if organism == "Hsa" then "www.ensembl.org" else "#{organism.sub(/.*\//,'')}.archive.ensembl.org" end
     "http://#{ensembl_url}/Homo_sapiens/Component/Transcript/Web/TranslationImage?db=core;p=#{protein};_rmd=d2a8;export=svg"
+  end
+ 
+  property :marked_svg => :single2array do
+    svg = Open.read(protein.ensembl_protein_image_url)
+    seq_len = protein.sequence_length
+    position = self.position
+
+
+    doc = Nokogiri::XML(svg)
+    width = doc.css('svg').first.attr('width').to_f
+    height = doc.css('svg').first.attr('height').to_f
+    start = doc.css('rect.ac').first.attr('x').to_f
+
+    if width and height and start and seq_len and position
+      offset = (width - start)/seq_len * position + start
+      svg.sub(/<\/svg>/,"<rect x='#{offset}' y='1' width='1' height='#{height}' style='fill:rgb(255,0,0);opacity:0.5;stroke:none;'></svg>")
+    else
+      svg
+    end
   end
 
   ASTERISK = "*"[0]
@@ -118,4 +138,4 @@ module MutatedIsoform
 
 end
 
-
+puts MutatedIsoform.setup("ENSP00000263253:L1160P", "Hsa/jun2011").marked_svg

@@ -16,6 +16,20 @@ module GenomicMutation
 
   self.format = "Genomic Mutation"
 
+  property :position => :single2array do
+    self.split(":")[1].to_i
+  end
+
+  property :offset_in_genes => :array2single do
+    gene2chr_start = Misc.process_to_hash(genes.flatten){|list| list.chr_start}
+    position.zip(genes).collect{|position, list|
+      list.collect{|gene|
+        next if not gene2chr_start.include? gene
+        [gene, position.to_i - gene2chr_start[gene]] * ":"
+      }.compact
+    }
+  end
+
   property :genes => :array2single do
     @genes ||= begin
                  genes = Sequence.job(:genes_at_genomic_positions, jobname, :organism => organism, :positions => self).run
