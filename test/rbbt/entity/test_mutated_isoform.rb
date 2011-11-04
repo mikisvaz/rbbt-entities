@@ -8,7 +8,7 @@ require 'rbbt/entity/mutated_isoform'
 class TestMutatedIsoform < Test::Unit::TestCase
   MUTATION = MutatedIsoform.setup("ENSP00000275493:G719A", "Hsa/jun2011")
 
-  def _test_protein
+  def test_protein
     assert_equal "EGFR", MUTATION.protein.gene.to("Associated Gene Name")
   end
 
@@ -30,11 +30,7 @@ class TestMutatedIsoform < Test::Unit::TestCase
     new_mutation = wildtype << change_position.to_s << mutation
     mutation = MutatedIsoform.setup([protein, new_mutation] * ":", "Hsa/jun2011")
     assert !mutation.truncated
-
-
-
   end
-
 
 end
 

@@ -53,9 +53,12 @@ module Genotype
   end
 
   returns "Ensembl Gene ID"
-  task :with_damaged_isoforms => :array do
+  input :threshold, :string, "high, medium or low", "medium"
+  task :with_damaged_isoforms => :array do |threshold|
+    values = ["high", "medium", "low", "neutral", "", nil].reverse
     set_info :organism, genotype.organism
-    genotype.select{|mutation| mutation.mutation_assessor_scores.select{|score| ["high"].include? score}.any?}.genes.flatten.uniq.clean_annotations
+    threshold = values.index threshold
+    genotype.select{|mutation| mutation.mutation_assessor_scores.select{|score| values.index(score) > threshold}.any?}.genes.flatten.uniq.clean_annotations
   end
 
   returns "Ensembl Gene ID"

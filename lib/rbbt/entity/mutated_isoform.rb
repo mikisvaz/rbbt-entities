@@ -2,6 +2,7 @@ require 'rbbt/entity'
 require 'rbbt/workflow'
 require 'rbbt/sources/organism'
 require 'rbbt/mutation/mutation_assessor'
+require 'rbbt/mutation/sift'
 require 'rbbt/entity/protein'
 require 'rbbt/entity/gene'
 require 'nokogiri'
@@ -100,6 +101,14 @@ module MutatedIsoform
                      end
                    end
 
+  end
+
+  property :sift_scores => :array2single do
+    @sift_scores ||= begin
+                       SIFT.predict(self.select{|iso_mut| iso_mut.consecuence == "MISS-SENSE"}).values_at(*self).collect{|v|
+                         v.nil? ? nil : v["Prediction"]
+                       }
+                     end
   end
 
   property :mutation_assessor_scores => :array2single do
