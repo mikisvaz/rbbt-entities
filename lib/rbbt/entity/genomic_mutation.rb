@@ -66,7 +66,7 @@ module GenomicMutation
                                    all_mutated_isoforms = MutatedIsoform.setup(mutated_isoforms.flatten.compact, organism)
                                    mutated_isoform2damage_score = Misc.process_to_hash(all_mutated_isoforms){|list| all_mutated_isoforms.mutation_assessor_scores}
 
-                                   mutated_isoforms.collect{|list| list.nil? ? [] : mutated_isoform2damage_score.values_at(*list)}
+                                   MutatedIsoform.setup(mutated_isoforms.collect{|list| list.nil? ? [] : mutated_isoform2damage_score.values_at(*list)}, organism)
                                  end
   end
 

@@ -53,12 +53,11 @@ module Genotype
   end
 
   returns "Ensembl Gene ID"
-  input :threshold, :string, "high, medium or low", "medium"
+  input :threshold, :float, "from 0 to 1", 0.5
   task :with_damaged_isoforms => :array do |threshold|
-    values = ["high", "medium", "low", "neutral", "", nil].reverse
     set_info :organism, genotype.organism
-    threshold = values.index threshold
-    genotype.select{|mutation| mutation.mutation_assessor_scores.select{|score| values.index(score) > threshold}.any?}.genes.flatten.uniq.clean_annotations
+    mutated_isoform_damage = Misc.process_to_hash(genotype.mutated_isoforms.flatten.compact){|list| MutatedIsoform.setup(list, genotype.organism).damage_scores}
+    genotype.select{|mutation|  if mutation.mutated_isoforms then mutated_isoform_damage.values_at(*mutation.mutated_isoforms.flatten.compact).select{|score| score > threshold}.any? else false; end}.genes.flatten.uniq.clean_annotations
   end
 
   returns "Ensembl Gene ID"
@@ -88,3 +87,4 @@ module Genotype
   end
 
 end
+

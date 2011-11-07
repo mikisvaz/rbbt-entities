@@ -103,11 +103,32 @@ module MutatedIsoform
 
   end
 
+  property :damage_scores => :array2single do
+    @damage_scores ||= begin
+                         sift_scores.zip(mutation_assessor_scores).collect{|p|
+                           p = p.compact
+                           if p.empty?
+                             0
+                           else
+                             p.inject(0.0){|acc, e| acc += e} / p.length
+                           end
+                         }
+                       end
+  end
+
   property :sift_scores => :array2single do
     @sift_scores ||= begin
-                       SIFT.predict(self.select{|iso_mut| iso_mut.consecuence == "MISS-SENSE"}).values_at(*self).collect{|v|
+                       values = SIFT.predict(self.select{|iso_mut| iso_mut.consecuence == "MISS-SENSE"}).values_at(*self).collect{|v|
                          v.nil? ? nil : v["Prediction"]
                        }
+
+                       range = {nil => nil,
+                         ""  => nil,
+                         "TOLERATED" => 0,
+                         "*DAMAGING" => 1,
+                         "DAMAGING" => 1}
+
+                       range.values_at *values
                      end
   end
 
@@ -141,7 +162,15 @@ module MutatedIsoform
                                      end
                                    end
 
-                                   new.values_at *self
+
+                                   range = {nil => nil,
+                                            ""  => nil,
+                                            "neutral" => 0,
+                                            "low" => 0.3,
+                                            "medium" => 0.6,
+                                            "high" => 1}
+
+                                   range.values_at *new.values_at(*self)
                                  end
   end
 
