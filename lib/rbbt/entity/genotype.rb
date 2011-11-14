@@ -5,26 +5,88 @@ require 'rbbt/entity/genomic_mutation'
 module Genotype
   extend Workflow
 
+  if self.respond_to? :extended
+    class << self
+      alias prev_genotype_extended extended
+    end
+  end
+
+  def self.extended(base)
+    prev_genotype_extended(base) if self.respond_to? :prev_genotype_extended
+    base.helper :genotype do
+      base
+    end
+  end
+
   module Cohort
     extend Workflow
 
-    dep :all_affected_genes
+    if self.respond_to? :extended
+      class << self
+        alias prev_genotype_cohort_extended extended
+      end
+    end
+
+    def self.extended(base)
+      prev_genotype_cohort_extended(base) if self.respond_to? :prev_genotype_cohort_extended
+
+      class << base
+        attr_accessor :metagenotype
+
+        def jobname
+          if @jobname.nil?
+            @jobname ||= "Meta-genotype: " + self.collect{|g| g.jobname}[0..3] * ", "
+            @jobname[100..-1] = " (etc)" if @jobname.length > 100
+          end
+          @jobname
+        end
+
+        def metagenotype
+          if @metagenotype.nil?
+            @metagenotype = GenomicMutation.setup(self.dup.flatten, jobname, self[0].organism)
+            @metagenotype.extend Genotype unless Genotype === @metagenotype
+          end
+          @metagenotype
+        end
+      end unless base.respond_to? :metagenotype
+
+      base.helper :metagenotype do
+        base.metagenotype
+      end
+
+      base.helper :samples do
+        base
+      end
+    end
+
+    returns "Ensembl Gene ID"
+    task :all_affected_genes => :array do
+      set_info :organism, metagenotype.organism
+      samples.collect{|genotype| genotype.all_affected_genes}.flatten.uniq
+    end
+
+    returns "Ensembl Gene ID"
+    task :damaged_genes => :array do
+      set_info :organism, metagenotype.organism
+      samples.collect{|genotype| genotype.damaged_genes}.flatten.uniq
+    end
+
+
     returns "Ensembl Gene ID"
     task :recurrent_genes => :array do
-      set_info :organism, genotype.organism
+      set_info :organism, metagenotype.organism
       count = Hash.new(0)
       samples.each do |genotype| genotype.genes.flatten.uniq.each{|gene| count[gene] += 1} end
       count.select{|gene, c| c > 1}.collect{|gene,c| gene.dup}
     end
-  end
 
-  input :length, :integer, "Length cutoff", 1000
-  returns "Ensembl Gene ID"
-  task :long_genes => :array do |length|
-    all_genes = genotype.genes 
-    all_genes = all_genes.flatten.compact.uniq
+    %w(damaged_genes recurrent_genes all_affected_genes).each do |name|
+      define_method name do |*args|
+        @cache ||= {}
+        @cache[[name, args]] ||= self.job(name, self.jobname).run
+      end
+    end
 
-    all_genes.select{|gene| gene.max_protein_length > length}.clean_annotations
   end
 
   returns "Ensembl Gene ID"
@@ -42,8 +104,8 @@ module Genotype
       length and length > 1000 or gene.name =~ /^PCDH/
     }
 
-      set_info :organism, genotype.organism
-      long_genes.clean_annotations
+    set_info :organism, genotype.organism
+    long_genes.clean_annotations
   end
 
   returns "Ensembl Gene ID"
@@ -57,7 +119,7 @@ module Genotype
   task :with_damaged_isoforms => :array do |threshold|
     set_info :organism, genotype.organism
     mutated_isoform_damage = Misc.process_to_hash(genotype.mutated_isoforms.flatten.compact){|list| MutatedIsoform.setup(list, genotype.organism).damage_scores}
-    genotype.select{|mutation|  if mutation.mutated_isoforms then mutated_isoform_damage.values_at(*mutation.mutated_isoforms.flatten.compact).select{|score| score > threshold}.any? else false; end}.genes.flatten.uniq.clean_annotations
+    genotype.select{|mutation|  if mutation.mutated_isoforms then mutated_isoform_damage.values_at(*mutation.mutated_isoforms.flatten.compact).select{|score| not score.nil?  and score > threshold}.any? else false; end}.genes.flatten.uniq.clean_annotations
   end
 
   returns "Ensembl Gene ID"
@@ -86,5 +148,11 @@ module Genotype
     (with_damaged_isoforms + truncated + affected_exon_junctions).uniq
   end
 
+  %w(all_affected_genes damaged_genes truncated with_damaged_isoforms affected_exon_junctions long_genes recurrent_genes).each do |name|
+    define_method name do |*args|
+      @cache ||= {}
+      @cache[[name, args]] ||= self.job(name, self.jobname).run
+    end
+  end
 end
 

@@ -25,17 +25,17 @@ module Gene
     to!(new_format).collect!{|v| v.nil? ? nil : v.first}
   end
 
-  def ensembl
-    to "Ensembl Gene ID"
+  property :ensembl => :array2single do
+    @ensembl ||= to "Ensembl Gene ID"
   end
 
-  def entrez
-    to "Entrez Gene ID"
+  property :entrez => :array2single do
+    @entrez ||= to "Entrez Gene ID"
   end
 
 
-  def name
-    to "Associated Gene Name"
+  property :name => :array2single do
+    @name ||= to "Associated Gene Name"
   end
 
   property :chr_start => :array2single do
@@ -125,7 +125,6 @@ module Gene
                     PMID.setup(Organism.gene_pmids(organism).tsv(:persist => true, :fields => ["PMID"], :type => :flat).values_at *self.entrez)
                   end 
   end
-
 end
 
 module Transcript

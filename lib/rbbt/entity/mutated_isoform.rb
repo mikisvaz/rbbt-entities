@@ -108,7 +108,7 @@ module MutatedIsoform
                          sift_scores.zip(mutation_assessor_scores).collect{|p|
                            p = p.compact
                            if p.empty?
-                             0
+                             nil
                            else
                              p.inject(0.0){|acc, e| acc += e} / p.length
                            end
@@ -118,7 +118,9 @@ module MutatedIsoform
 
   property :sift_scores => :array2single do
     @sift_scores ||= begin
-                       values = SIFT.predict(self.select{|iso_mut| iso_mut.consecuence == "MISS-SENSE"}).values_at(*self).collect{|v|
+                       missense = self.select{|iso_mut| iso_mut.consecuence == "MISS-SENSE"}
+
+                       values = SIFT.predict(missense).values_at(*self).collect{|v|
                          v.nil? ? nil : v["Prediction"]
                        }
 

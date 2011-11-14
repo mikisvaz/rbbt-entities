@@ -79,5 +79,10 @@ module GenomicMutation
                    end
   end
 
+  property :affected_exons  => :array2single do
+    @affected_exons ||= begin
+                          Sequence.job(:exons_at_genomic_positions, jobname, :organism => organism, :positions => self).run.values_at *self
+                        end
+  end
 
 end
