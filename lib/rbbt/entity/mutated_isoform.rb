@@ -120,7 +120,7 @@ module MutatedIsoform
     @sift_scores ||= begin
                        missense = self.select{|iso_mut| iso_mut.consecuence == "MISS-SENSE"}
 
-                       values = SIFT.predict(missense).values_at(*self).collect{|v|
+                       values = SIFT.chunked_predict(missense).values_at(*self).collect{|v|
                          v.nil? ? nil : v["Prediction"]
                        }
 

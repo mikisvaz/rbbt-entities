@@ -41,7 +41,8 @@ module Protein
   end
 
   property :pfam => :array2single do
-    Organism.gene_pfam(organism).tsv :flat, :persist => true
+    index = Organism.gene_pfam(organism).tsv :flat, :persist => true
+    index.unnamed = true
     pfam = index.values_at(*self).flatten
     Pfam.setup pfam
   end

@@ -16,6 +16,11 @@ module GenomicMutation
 
   self.format = "Genomic Mutation"
 
+  property :score => :single2array do
+    self.split(":")[3].to_f
+  end
+
+
   property :position => :single2array do
     self.split(":")[1].to_i
   end

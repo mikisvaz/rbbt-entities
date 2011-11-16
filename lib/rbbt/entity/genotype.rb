@@ -35,15 +35,15 @@ module Genotype
 
         def jobname
           if @jobname.nil?
-            @jobname ||= "Meta-genotype: " + self.collect{|g| g.jobname}[0..3] * ", "
-            @jobname[100..-1] = " (etc)" if @jobname.length > 100
+            @jobname ||= "Meta-genotype: " + self.collect{|g| g.jobname} * ", "
+            @jobname[100..-1] = " (etc; #{self.length} genotypes)" if @jobname.length > 100
           end
           @jobname
         end
 
         def metagenotype
           if @metagenotype.nil?
-            @metagenotype = GenomicMutation.setup(self.dup.flatten, jobname, self[0].organism)
+            @metagenotype = GenomicMutation.setup(self.dup.flatten, jobname, self[0].organism, self[0].watson)
             @metagenotype.extend Genotype unless Genotype === @metagenotype
           end
           @metagenotype
