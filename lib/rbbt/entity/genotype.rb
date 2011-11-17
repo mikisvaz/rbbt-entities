@@ -50,6 +50,8 @@ module Genotype
         end
       end unless base.respond_to? :metagenotype
 
+      base.each do |genotype| genotype.extend Genotype unless Genotype === genotype end
+
       base.helper :metagenotype do
         base.metagenotype
       end
@@ -57,6 +59,8 @@ module Genotype
       base.helper :samples do
         base
       end
+
+      NamedArray.setup(base, base.collect{|base| base.jobname})
     end
 
     returns "Ensembl Gene ID"
