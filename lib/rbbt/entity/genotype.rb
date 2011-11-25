@@ -27,10 +27,10 @@ module Genotype
       end
     end
 
-    def self.extended(base)
-      prev_genotype_cohort_extended(base) if self.respond_to? :prev_genotype_cohort_extended
+    def self.extended(cohort)
+      prev_genotype_cohort_extended(cohort) if self.respond_to? :prev_genotype_cohort_extended
 
-      class << base
+      class << cohort
         attr_accessor :metagenotype
 
         def jobname
@@ -48,19 +48,24 @@ module Genotype
           end
           @metagenotype
         end
-      end unless base.respond_to? :metagenotype
+      end unless cohort.respond_to? :metagenotype
 
-      base.each do |genotype| genotype.extend Genotype unless Genotype === genotype end
+      cohort.each do |genotype| genotype.extend Genotype unless Genotype === genotype end
 
-      base.helper :metagenotype do
-        base.metagenotype
+      cohort.helper :metagenotype do
+        cohort.metagenotype
       end
 
-      base.helper :samples do
-        base
+      cohort.helper :samples do
+        cohort
       end
 
-      NamedArray.setup(base, base.collect{|base| base.jobname})
+      NamedArray.setup(cohort, cohort.collect{|genotype| genotype.jobname})
+    end
+
+    def subset(genotypes)
+      new = self.values_at *(genotypes & fields)
+      new.extend Cohort
     end
 
     returns "Ensembl Gene ID"

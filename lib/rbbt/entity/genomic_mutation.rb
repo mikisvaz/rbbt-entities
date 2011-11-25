@@ -16,13 +16,63 @@ module GenomicMutation
 
   self.format = "Genomic Mutation"
 
+  def watson
+    @watson = Sequence.job(:is_watson, jobname, :mutations => self.clean_annotations, :organism => organism).run if @watson.nil?
+    @watson
+  end
+
+  property :chromosome => :array2single do
+    self.clean_annotations.collect{|mut| mut.split(":")[0]}
+  end
+
+  property :position => :array2single do
+    self.clean_annotations.collect{|mut| mut.split(":")[1].to_i}
+  end
+
+  property :base => :array2single do
+    self.clean_annotations.collect{|mut| mut.split(":")[2]}
+  end
+
   property :score => :single2array do
-    self.split(":")[3].to_f
+    self.clean_annotations.collect{|mut| mut.split(":")[3].to_f}
+  end
+
+  property :noscore => :single2array do
+    self.annotate self.clean_annotations.collect{|mut| mut.split(":")[0..2]}
   end
 
 
-  property :position => :single2array do
-    self.split(":")[1].to_i
+  property :to_watson => :array2single do
+    if watson
+      self
+    else
+      result = Sequence.job(:to_watson, jobname, :mutations => self.clean_annotations, :organism => organism).run 
+      self.annotate(result)
+      result
+    end
+  end
+
+  property :reference => :array2single do
+    @reference ||= Sequence.job(:reference_allele_at_genomic_positions, jobname, :positions => self.clean_annotations, :organism => organism).run.values_at *self
+  end
+
+  property :type => :array2single do
+    self.to_watson.base.zip(reference).collect do |base,reference|
+      case
+      when base == reference
+        "none"
+      when (base.length > 1 or base == '-')
+        "indel"
+      when (not %w(A G T C).include? base and not %w(A G T C).include? reference) 
+        nil
+      when ((base == "A" or base == "G") and (reference == "A" or reference == "G"))
+        "transition"
+      when ((base == "T" or base == "C") and (reference == "T" or reference == "C"))
+        "transition"
+      else
+        "transversion"
+      end
+    end
   end
 
   property :offset_in_genes => :array2single do
@@ -37,7 +87,7 @@ module GenomicMutation
 
   property :genes => :array2single do
     @genes ||= begin
-                 genes = Sequence.job(:genes_at_genomic_positions, jobname, :organism => organism, :positions => self).run
+                 genes = Sequence.job(:genes_at_genomic_positions, jobname, :organism => organism, :positions => self.clean_annotations).run
                  genes.unnamed = true
                  genes = genes.values_at *self
                  Gene.setup(genes, "Ensembl Gene ID", organism)
@@ -46,14 +96,15 @@ module GenomicMutation
 
   property :mutated_isoforms => :array2single do
     @mutated_isoforms ||= begin
-                            res = Sequence.job(:mutated_isoforms_for_genomic_mutations, jobname, :watson => watson, :organism => organism, :mutations => self).run.values_at *self
+                            res = Sequence.job(:mutated_isoforms_for_genomic_mutations, jobname, :watson => watson, :organism => organism, :mutations => self.clean_annotations).run.values_at *self
                             res.each{|list| list.organism = organism}
+                            res[0].annotate res if res[0].respond_to? :annotate
                             res
                           end
   end
 
   property :exon_junctions do
-    @exon_junctions ||= Sequence.job(:exon_junctions_at_genomic_positions, jobname, :organism => organism, :positions => self).run.values_at *self
+    @exon_junctions ||= Sequence.job(:exon_junctions_at_genomic_positions, jobname, :organism => organism, :positions => self.clean_annotations).run.values_at *self
   end
 
   property :in_exon_junction? => :array2single do
@@ -65,28 +116,9 @@ module GenomicMutation
     @over_genes[gene] ||= genes.clean_annotations.collect{|list| list.include? gene}
   end
 
-  property :mutation_assessor_scores => :array2single do
-    @mutation_assessor_scores ||= begin
-                                   mutated_isoforms = self.mutated_isoforms
-                                   all_mutated_isoforms = MutatedIsoform.setup(mutated_isoforms.flatten.compact, organism)
-                                   mutated_isoform2damage_score = Misc.process_to_hash(all_mutated_isoforms){|list| all_mutated_isoforms.mutation_assessor_scores}
-
-                                   MutatedIsoform.setup(mutated_isoforms.collect{|list| list.nil? ? [] : mutated_isoform2damage_score.values_at(*list)}, organism)
-                                 end
-  end
-
-  property :truncated do
-    @truncated ||= begin
-                     mutated_isoforms = self.mutated_isoforms
-                     all_mutated_isoforms = MutatedIsoform.setup(mutated_isoforms.flatten.compact, organism)
-                     mutated_isoform2truncated = Misc.process_to_hash(all_mutated_isoforms){|list| all_mutated_isoforms.truncated}
-                     mutated_isoforms.collect{|list| list.nil? ? [] : mutated_isoform2truncated.values_at(*list)}
-                   end
-  end
-
   property :affected_exons  => :array2single do
     @affected_exons ||= begin
-                          Sequence.job(:exons_at_genomic_positions, jobname, :organism => organism, :positions => self).run.values_at *self
+                          Sequence.job(:exons_at_genomic_positions, jobname, :organism => organism, :positions => self.clean_annotations).run.values_at *self
                         end
   end
 

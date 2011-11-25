@@ -25,6 +25,10 @@ module Gene
     to!(new_format).collect!{|v| v.nil? ? nil : v.first}
   end
 
+  property :strand => :array2single do 
+    @strand ||= Organism.gene_positions(organism).tsv(:fields => ["Strand"], :type => :single, :persist => true).values_at *self
+  end
+
   property :ensembl => :array2single do
     @ensembl ||= to "Ensembl Gene ID"
   end
@@ -32,7 +36,6 @@ module Gene
   property :entrez => :array2single do
     @entrez ||= to "Entrez Gene ID"
   end
-
 
   property :name => :array2single do
     @name ||= to "Associated Gene Name"

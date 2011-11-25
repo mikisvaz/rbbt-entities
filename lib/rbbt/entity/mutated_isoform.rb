@@ -100,7 +100,6 @@ module MutatedIsoform
                        end
                      end
                    end
-
   end
 
   property :damage_scores => :array2single do
@@ -114,6 +113,14 @@ module MutatedIsoform
                            end
                          }
                        end
+  end
+
+  property :damaged? => :array2single do |*threshold|
+    @damaged ||= begin
+                   threshold = threshold.shift || 0.6
+                   damage_scores = self.damage_scores
+                   damage_scores.collect{|damage| not damage.nil? and damage > threshold }
+                 end
   end
 
   property :sift_scores => :array2single do
