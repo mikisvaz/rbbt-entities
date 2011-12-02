@@ -13,12 +13,12 @@ module MutatedIsoform
 
   self.format = "Mutated Isoform"
 
-  property :protein do
-    if Array === self
-      Protein.setup(self.collect{|mutation| mutation.split(":").first}, "Ensembl Protein ID", organism)
-    else
-      Protein.setup(self.split(":").first, "Ensembl Protein ID", organism)
-    end
+  property :protein => :array2single do
+    Protein.setup(self.collect{|mutation| mutation.split(":").first if mutation =~ /^ENSP/}, "Ensembl Protein ID", organism)
+  end
+
+  property :transcript => :array2single do
+    Transcript.setup(protein.transcript.zip(self).collect{|p| p.compact.first}, "Ensembl Transcript ID", organism)
   end
 
   property :change => :single2array do

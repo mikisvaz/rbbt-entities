@@ -138,6 +138,13 @@ module Transcript
 
   self.format = "Ensembl Transcript ID"
 
+
+  def self.enst2ensg(organism, transcript)
+    @enst2ensg ||= {}
+    @enst2ensg[organism] ||= Organism.gene_transcripts(organism).tsv(:type => :single, :key_field => "Ensembl Transcript ID", :fields => ["Ensembl Gene ID"], :persist => true)
+    @enst2ensg[organism][transcript]
+  end
+
   property :to! => :array2single do |new_format|
     return self if format == new_format
     Gene.setup(Translation.job(:tsv_probe_translate, "", :organism => organism, :genes => self, :format => new_format).exec.values_at(*self), new_format, organism)
@@ -148,10 +155,13 @@ module Transcript
     to!(new_format).collect!{|v| v.nil? ? nil : v.first}
   end
 
-  def ensembl
+  property :ensembl => :array2single do
     to "Ensembl Transcript ID"
   end
 
+  property :gene => :array2single do
+    Gene.setup(ensembl.collect{|transcript| Transcript.enst2ensg(organism, transcript)}, "Ensembl Gene ID", organism)
+  end
 
   property :sequence => :array2single do
     transcript_sequence = Organism.transcript_sequence(organism).tsv :persist => true

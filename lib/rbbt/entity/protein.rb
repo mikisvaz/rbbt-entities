@@ -17,8 +17,20 @@ module Protein
 
   self.format = "Ensembl Protein ID"
 
-  def ensembl
+  def self.ensp2enst(organism, protein)
+    @ensp2enst ||= {}
+    @ensp2enst[organism] ||= Organism.transcripts(organism).tsv(:type => :single, :key_field => "Ensembl Protein ID", :fields => ["Ensembl Transcript ID"], :persist => true)
+    @ensp2enst[organism][protein]
+  end
+
+  property :ensembl => :array2single do
     to "Ensembl Protein ID"
+  end
+
+  property :transcript => :array2single do
+    ensembl.collect{|ensp|
+      Protein.ensp2enst(organism, ensp)
+    }
   end
 
   property :ensembl_protein_image_url => :single2array do
