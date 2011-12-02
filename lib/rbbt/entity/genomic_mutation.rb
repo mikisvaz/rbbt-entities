@@ -17,7 +17,11 @@ module GenomicMutation
   self.format = "Genomic Mutation"
 
   def watson
-    @watson = Sequence.job(:is_watson, jobname, :mutations => self.clean_annotations, :organism => organism).run if @watson.nil?
+    if Array === self
+      @watson = Sequence.job(:is_watson, jobname, :mutations => self.clean_annotations, :organism => organism).run if @watson.nil?
+    else
+      @watson = Sequence.job(:is_watson, jobname, :mutations => [self.clean_annotations], :organism => organism).run if @watson.nil?
+    end
     @watson
   end
 

@@ -32,7 +32,6 @@ class TestGenomicMutation < Test::Unit::TestCase
     assert MUTATION.over_gene? Gene.setup("PSTK", "Associated Gene Name", "Hsa/jun2011").ensembl
     assert(!(SPLICING.over_gene? Gene.setup("PSTK", "Associated Gene Name", "Hsa/jun2011").ensembl))
   end
-
 end
 
 
