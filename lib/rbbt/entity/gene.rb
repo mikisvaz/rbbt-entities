@@ -15,6 +15,14 @@ module Gene
 
   self.format = Organism::Hsa.identifiers.all_fields - ["Ensembl Protein ID", "Ensembl Transcript ID"]
 
+  property :ortholog => :array2single do |other|
+    return self if organism =~ /^#{ other }(?!\w)/
+    new_organism = organism.split(":")
+    new_organism[0] = other
+    new_organism = new_organism * "/"
+    Gene.setup(Organism[organism]["ortholog_#{other}"].tsv(:persist => true).values_at(*self.ensembl).collect{|l| l.first}, "Ensembl Gene ID", new_organism)
+  end
+
   property :to! => :array2single do |new_format|
     return self if format == new_format
     Gene.setup(Translation.job(:tsv_translate, "", :organism => organism, :genes => self, :format => new_format).exec.values_at(*self), new_format, organism)
