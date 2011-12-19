@@ -23,8 +23,12 @@ module Protein
     @ensp2enst[organism][protein]
   end
 
+  property :uniprot => :array2single do
+    @uniprot ||= to "UniProt/SwissProt Accession"
+  end
+
   property :ensembl => :array2single do
-    to "Ensembl Protein ID"
+    @ensembl = to "Ensembl Protein ID"
   end
 
   property :transcript => :array2single do

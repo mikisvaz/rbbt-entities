@@ -10,6 +10,14 @@ Workflow.require_workflow "Translation"
 module Gene
   extend Entity
 
+  def self.filter(query, field = nil, options = nil, entity = nil)
+    return true if query == entity
+    
+    return true if query == Gene.setup(entity.dup, options.merge(:format => field)).name
+
+    false
+  end
+
   self.annotation :format
   self.annotation :organism
 
@@ -43,6 +51,10 @@ module Gene
 
   property :entrez => :array2single do
     @entrez ||= to "Entrez Gene ID"
+  end
+
+  property :uniprot => :array2single do
+    @uniprot ||= to "UniProt/SwissProt Accession"
   end
 
   property :name => :array2single do
@@ -136,6 +148,12 @@ module Gene
                     PMID.setup(Organism.gene_pmids(organism).tsv(:persist => true, :fields => ["PMID"], :type => :flat).values_at *self.entrez)
                   end 
   end
+
+  property :sequence => :array2single do
+    @gene_sequence ||= Organism.gene_sequence(organism).tsv :persist => true
+    @gene_sequence.unnamed = true
+    @gene_sequence.values_at *self.ensembl
+  end
 end
 
 module Transcript
@@ -155,7 +173,7 @@ module Transcript
 
   property :to! => :array2single do |new_format|
     return self if format == new_format
-    Gene.setup(Translation.job(:tsv_probe_translate, "", :organism => organism, :genes => self, :format => new_format).exec.values_at(*self), new_format, organism)
+    Gene.setup(Translation.job(:tsv_translate_probe, "", :organism => organism, :probes => self, :format => new_format).exec.values_at(*self), new_format, organism)
   end
 
   property :to => :array2single do |new_format|

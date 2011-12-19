@@ -18,7 +18,8 @@ module Entity
 
       def self.extended(data)
         prev_entity_extended(data)
-        data.extend AnnotatedArray
+        data.extend AnnotatedArray if Array === data
+        data
       end
 
       def self.format=(formats)

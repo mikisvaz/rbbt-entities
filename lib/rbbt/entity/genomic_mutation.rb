@@ -25,6 +25,10 @@ module GenomicMutation
     @watson
   end
 
+  property :ensembl_browser => :single2array do
+    "http://jun2011.archive.ensembl.org/Homo_sapiens/Location/View?db=core&r=#{chromosome}:#{position - 100}-#{position + 100}"
+  end
+
   property :chromosome => :array2single do
     self.clean_annotations.collect{|mut| mut.split(":")[0]}
   end
@@ -44,7 +48,6 @@ module GenomicMutation
   property :noscore => :single2array do
     self.annotate self.clean_annotations.collect{|mut| mut.split(":")[0..2]}
   end
-
 
   property :to_watson => :array2single do
     if watson
@@ -116,6 +119,7 @@ module GenomicMutation
   end
 
   property :over_gene? => :array2single do |gene|
+    gene = gene.ensembl if gene.respond_to? :ensembl
     @over_genes ||= {}
     @over_genes[gene] ||= genes.clean_annotations.collect{|list| list.include? gene}
   end
@@ -125,5 +129,4 @@ module GenomicMutation
                           Sequence.job(:exons_at_genomic_positions, jobname, :organism => organism, :positions => self.clean_annotations).run.values_at *self
                         end
   end
-
 end
