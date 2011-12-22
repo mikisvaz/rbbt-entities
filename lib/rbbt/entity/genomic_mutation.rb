@@ -30,19 +30,23 @@ module GenomicMutation
   end
 
   property :chromosome => :array2single do
-    self.clean_annotations.collect{|mut| mut.split(":")[0]}
+    @chromosome ||= self.clean_annotations.collect{|mut| mut.split(":")[0]}
   end
 
   property :position => :array2single do
-    self.clean_annotations.collect{|mut| mut.split(":")[1].to_i}
+   @position ||= self.clean_annotations.collect{|mut| mut.split(":")[1].to_i}
   end
 
   property :base => :array2single do
-    self.clean_annotations.collect{|mut| mut.split(":")[2]}
+    @base ||= self.clean_annotations.collect{|mut| mut.split(":")[2]}
   end
 
-  property :score => :single2array do
-    self.clean_annotations.collect{|mut| mut.split(":")[3].to_f}
+  property :score => :array2single do
+    @base ||= self.clean_annotations.collect{|mut| mut.split(":")[3].to_f}
+  end
+
+  property :remove_score => :array2single do
+    @remove_score ||= self.annotate(self.collect{|mut| mut.split(":")[0..2] * ":"})
   end
 
   property :noscore => :single2array do

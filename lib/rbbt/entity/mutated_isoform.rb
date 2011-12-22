@@ -15,24 +15,28 @@ module MutatedIsoform
   self.format = "Mutated Isoform"
 
   property :protein => :array2single do
-    Protein.setup(self.collect{|mutation| mutation.split(":").first if mutation =~ /^ENSP/}, "Ensembl Protein ID", organism)
+    @protein ||= Protein.setup(self.collect{|mutation| mutation.split(":").first if mutation =~ /^ENSP/}, "Ensembl Protein ID", organism)
   end
 
   property :transcript => :array2single do
-    protein = self.protein
-    Transcript.setup(protein.transcript.zip(self.collect{|mutation| mutation.split(":").first}).collect{|p| p.compact.first}, "Ensembl Transcript ID", organism)
+    @transcript ||= begin
+                      protein = self.protein
+                      Transcript.setup(protein.transcript.zip(self.collect{|mutation| mutation.split(":").first}).collect{|p| p.compact.first}, "Ensembl Transcript ID", organism)
+                    end
   end
 
-  property :change => :single2array do
-    self.split(":").last
+  property :change => :array2single do
+    @change ||= self.collect{|mi| mi.split(":").last}
   end
 
-  property :position => :single2array do
-    if change.match(/[^\d](\d+)[^\d]/)
-      $1.to_i
-    else
-      nil
-    end
+  property :position => :array2single do
+    @position ||= change.collect{|c|
+      if c.match(/[^\d](\d+)[^\d]/)
+        $1.to_i
+      else
+        nil
+      end
+    }
   end
   
   property :ensembl_protein_image_url => :single2array do
@@ -88,7 +92,7 @@ module MutatedIsoform
                      self.collect do |isoform_mutation|
 
                        next if isoform_mutation.consequence != "FRAMESHIFT" and isoform_mutation.consequence != "NONSENSE"
-                       protein = isoform_mutation.protein
+                       protein  = isoform_mutation.protein
                        position = isoform_mutation.position
                        sequence_length = protein2sequence_length[protein]
 
@@ -135,11 +139,13 @@ module MutatedIsoform
   end
 
   property :damaged? => :array2single do |methods,threshold|
-    @damaged ||= begin
-                   threshold = 0.8 if threshold.nil?
-                   damage_scores = self.damage_scores(methods)
-                   damage_scores.collect{|damage| not damage.nil? and damage > threshold }
-                 end
+    @damaged ||= {}
+    @damaged[[methods, threshold]] ||= begin
+                                         threshold     = 0.8 if threshold.nil?
+                                         damage_scores = self.damage_scores(methods)
+                                         truncated     = self.truncated
+                                         damage_scores.zip(truncated).collect{|damage, truncated| truncated or (not damage.nil? and damage > threshold) }
+                                       end
   end
 
   property :sift_scores => :array2single do

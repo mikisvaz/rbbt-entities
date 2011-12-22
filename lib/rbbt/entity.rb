@@ -108,7 +108,7 @@ module Entity
             if Hash === res
               res[self]
             else
-              pos = self.container.index self
+              pos = self.container_index 
               res[pos]
             end
           else
