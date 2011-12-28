@@ -124,10 +124,11 @@ module Genotype
   end
 
   returns "Ensembl Gene ID"
-  input :threshold, :float, "from 0 to 1", 0.5
-  task :with_damaged_isoforms => :array do |threshold|
+  input :methods, :array, "Predictive methods", [:sift, :mutation_assessor]
+  input :threshold, :float, "from 0 to 1", 0.8
+  task :with_damaged_isoforms => :array do |methods,threshold|
     set_info :organism, genotype.organism
-    mutated_isoform_damage = Misc.process_to_hash(genotype.mutated_isoforms.flatten.compact){|list| MutatedIsoform.setup(list, genotype.organism).damage_scores}
+    mutated_isoform_damage = Misc.process_to_hash(genotype.mutated_isoforms.flatten.compact){|list| MutatedIsoform.setup(list, genotype.organism).damage_scores(methods)}
     genotype.select{|mutation|  if mutation.mutated_isoforms then mutated_isoform_damage.values_at(*mutation.mutated_isoforms.flatten.compact).select{|score| not score.nil?  and score > threshold}.any? else false; end}.genes.flatten.uniq.clean_annotations
   end
 
@@ -159,8 +160,10 @@ module Genotype
 
   %w(all_affected_genes damaged_genes truncated with_damaged_isoforms affected_exon_junctions long_genes recurrent_genes).each do |name|
     define_method name do |*args|
+      options = args.first
       @cache ||= {}
-      @cache[[name, args]] ||= self.job(name, self.jobname).run
+      key = [name, Misc.hash2md5(options || {})]
+      @cache[key] ||= self.job(name, self.jobname, options || {}).run
     end
   end
 end

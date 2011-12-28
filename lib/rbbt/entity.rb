@@ -18,7 +18,8 @@ module Entity
 
       def self.extended(data)
         prev_entity_extended(data)
-        data.extend AnnotatedArray
+        data.extend AnnotatedArray if Array === data
+        data
       end
 
       def self.format=(formats)
@@ -111,7 +112,7 @@ module Entity
             if Hash === res
               res[self]
             else
-              pos = self.container.index self
+              pos = self.container_index 
               res[pos]
             end
           else

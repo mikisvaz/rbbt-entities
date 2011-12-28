@@ -4,6 +4,7 @@ require 'rbbt/sources/organism'
 require 'rbbt/mutation/mutation_assessor'
 require 'rbbt/mutation/sift'
 require 'rbbt/entity/protein'
+require 'rbbt/sources/uniprot'
 require 'rbbt/entity/gene'
 require 'nokogiri'
 
@@ -14,23 +15,28 @@ module MutatedIsoform
   self.format = "Mutated Isoform"
 
   property :protein => :array2single do
-    Protein.setup(self.collect{|mutation| mutation.split(":").first if mutation =~ /^ENSP/}, "Ensembl Protein ID", organism)
+    @protein ||= Protein.setup(self.collect{|mutation| mutation.split(":").first if mutation =~ /^ENSP/}, "Ensembl Protein ID", organism)
   end
 
   property :transcript => :array2single do
-    Transcript.setup(protein.transcript.zip(self).collect{|p| p.compact.first}, "Ensembl Transcript ID", organism)
+    @transcript ||= begin
+                      protein = self.protein
+                      Transcript.setup(protein.transcript.zip(self.collect{|mutation| mutation.split(":").first}).collect{|p| p.compact.first}, "Ensembl Transcript ID", organism)
+                    end
   end
 
-  property :change => :single2array do
-    self.split(":").last
+  property :change => :array2single do
+    @change ||= self.collect{|mi| mi.split(":").last}
   end
 
-  property :position => :single2array do
-    if change.match(/[^\d](\d+)[^\d]/)
-      $1.to_i
-    else
-      nil
-    end
+  property :position => :array2single do
+    @position ||= change.collect{|c|
+      if c.match(/[^\d](\d+)[^\d]/)
+        $1.to_i
+      else
+        nil
+      end
+    }
   end
   
   property :ensembl_protein_image_url => :single2array do
@@ -59,7 +65,7 @@ module MutatedIsoform
 
   ASTERISK = "*"[0]
   CONSECUENCES = %w(UTR SYNONYMOUS NOSTOP MISS-SENSE INDEL FRAMESHIFT NONSENSE)
-  property :consecuence => :single2array do
+  property :consequence => :single2array do
     prot, change = self.split(":")
 
     case
@@ -85,8 +91,8 @@ module MutatedIsoform
                      protein2sequence_length = Misc.process_to_hash(self.protein.flatten){|list| list.sequence_length}
                      self.collect do |isoform_mutation|
 
-                       next if isoform_mutation.consecuence != "FRAMESHIFT" and isoform_mutation.consecuence != "NONSENSE"
-                       protein = isoform_mutation.protein
+                       next if isoform_mutation.consequence != "FRAMESHIFT" and isoform_mutation.consequence != "NONSENSE"
+                       protein  = isoform_mutation.protein
                        position = isoform_mutation.position
                        sequence_length = protein2sequence_length[protein]
 
@@ -102,48 +108,69 @@ module MutatedIsoform
                    end
   end
 
-  property :damage_scores => :array2single do
-    @damage_scores ||= begin
-                         sift_scores.zip(mutation_assessor_scores).collect{|p|
-                           p = p.compact
-                           if p.empty?
-                             nil
-                           else
-                             p.inject(0.0){|acc, e| acc += e} / p.length
-                           end
-                         }
-                       end
+  property :damage_scores => :array2single do |*args|
+    methods = args.first
+    methods = [:sift, :mutation_assessor] if methods.nil?
+    methods = [methods] unless Array === methods
+    @damage_scores ||= {}
+    @damage_scores[methods] ||= begin
+                                  values = methods.collect{|method|
+                                    case method.to_sym
+                                    when :sift
+                                      sift_scores
+                                    when :mutation_assessor
+                                      mutation_assessor_scores
+                                    else
+                                      raise "Unknown predictive method: #{ method }"
+                                    end
+                                  }
+                                  scores = values.shift
+                                  scores = scores.zip(*values)
+                                  
+                                  scores.collect{|p|
+                                    p = p.compact
+                                    if p.empty?
+                                      nil
+                                    else
+                                      p.inject(0.0){|acc, e| acc += e} / p.length
+                                    end
+                                  }
+                                end
   end
 
-  property :damaged? => :array2single do |*threshold|
-    @damaged ||= begin
-                   threshold = threshold.shift || 0.6
-                   damage_scores = self.damage_scores
-                   damage_scores.collect{|damage| not damage.nil? and damage > threshold }
-                 end
+  property :damaged? => :array2single do |methods,threshold|
+    @damaged ||= {}
+    @damaged[[methods, threshold]] ||= begin
+                                         threshold     = 0.8 if threshold.nil?
+                                         damage_scores = self.damage_scores(methods)
+                                         truncated     = self.truncated
+                                         damage_scores.zip(truncated).collect{|damage, truncated| truncated or (not damage.nil? and damage > threshold) }
+                                       end
   end
 
   property :sift_scores => :array2single do
     @sift_scores ||= begin
-                       missense = self.select{|iso_mut| iso_mut.consecuence == "MISS-SENSE"}
+                       missense = self.select{|iso_mut| iso_mut.consequence == "MISS-SENSE"}
 
                        values = SIFT.chunked_predict(missense).values_at(*self).collect{|v|
-                         v.nil? ? nil : v["Prediction"]
+                         v.nil? ? nil : 1.0 - v["Score 1"].to_f
                        }
 
-                       range = {nil => nil,
-                         ""  => nil,
-                         "TOLERATED" => 0,
-                         "*DAMAGING" => 1,
-                         "DAMAGING" => 1}
+                       values
 
-                       range.values_at *values
+                       #range = {nil => nil,
+                       #  ""  => nil,
+                       #  "TOLERATED" => 0,
+                       #  "*DAMAGING" => 1,
+                       #  "DAMAGING" => 1}
+
+                       #range.values_at *values
                      end
   end
 
   property :mutation_assessor_scores => :array2single do
     @mutation_assesor_scores ||= begin
-                                   missense = self.select{|mutation| mutation.consecuence == "MISS-SENSE"}
+                                   missense = self.select{|mutation| mutation.consequence == "MISS-SENSE"}
 
                                    correspondance = {}
                                    list = missense.zip(missense.protein.to "UniProt/SwissProt ID").collect do |mutation, uniprot|
@@ -173,14 +200,21 @@ module MutatedIsoform
 
 
                                    range = {nil => nil,
-                                            ""  => nil,
-                                            "neutral" => 0,
-                                            "low" => 0.3,
-                                            "medium" => 0.6,
-                                            "high" => 1}
+                                     ""  => nil,
+                                     "neutral" => 0,
+                                     "low" => 0.5,
+                                     "medium" => 0.7,
+                                     "high" => 1.0}
 
                                    range.values_at *new.values_at(*self)
                                  end
   end
+
+  property :pdbs => :single do
+    uniprot = self.transcript.protein.uniprot
+    next if uniprot.nil?
+    Uniprot.pdbs_covering_aa_position(uniprot, self.position)
+  end
+
 
 end
