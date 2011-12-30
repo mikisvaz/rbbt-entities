@@ -108,8 +108,7 @@ module Entity
             if Hash === res
               res[self]
             else
-              pos = self.container_index 
-              res[pos]
+              res[self.container_index]
             end
           else
             res = self.make_list.send(ary_name, *args)
@@ -118,6 +117,20 @@ module Entity
         end
       end
     end
+  end
+
+  def property2(name, &block)
+    case
+    when (Hash === name and name.size == 1)
+      name, type = name.collect.first
+    when (String === name or Symbol === name)
+      type = :both
+    else
+      raise "Format of name ( => type) not understood: #{name.inspect}"
+    end
+
+    name = name.to_s unless String === name
+
   end
 end
 

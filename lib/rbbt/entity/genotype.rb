@@ -43,7 +43,7 @@ module Genotype
 
         def metagenotype
           if @metagenotype.nil?
-            @metagenotype = GenomicMutation.setup(self.dup.flatten, jobname, self[0].organism, self[0].watson)
+            @metagenotype = GenomicMutation.setup(self.dup.flatten, jobname, self[0].organism)
             @metagenotype.extend Genotype unless Genotype === @metagenotype
           end
           @metagenotype
@@ -124,6 +124,12 @@ module Genotype
   end
 
   returns "Ensembl Gene ID"
+  task :with_non_synonymous_mutations => :array do
+    set_info :organism, genotype.organism
+    genotype.mutated_isoforms.flatten.compact.reject{|mutated_isoform| ["SYNONYMOUS", "UTR"].include? mutated_isoform.consequence}.transcript.gene.uniq
+  end
+
+  returns "Ensembl Gene ID"
   input :methods, :array, "Predictive methods", [:sift, :mutation_assessor]
   input :threshold, :float, "from 0 to 1", 0.8
   task :with_damaged_isoforms => :array do |methods,threshold|
@@ -158,7 +164,7 @@ module Genotype
     (with_damaged_isoforms + truncated + affected_exon_junctions).uniq
   end
 
-  %w(all_affected_genes damaged_genes truncated with_damaged_isoforms affected_exon_junctions long_genes recurrent_genes).each do |name|
+  %w(all_affected_genes damaged_genes truncated with_damaged_isoforms with_non_synonymous_mutations affected_exon_junctions long_genes recurrent_genes).each do |name|
     define_method name do |*args|
       options = args.first
       @cache ||= {}

@@ -17,16 +17,18 @@ module GenomicMutation
   self.format = "Genomic Mutation"
 
   def watson
-    if Array === self
-      @watson = Sequence.job(:is_watson, jobname, :mutations => self.clean_annotations, :organism => organism).run if @watson.nil?
-    else
-      @watson = Sequence.job(:is_watson, jobname, :mutations => [self.clean_annotations], :organism => organism).run if @watson.nil?
+    if @watson.nil?
+      if Array === self
+        @watson = Sequence.job(:is_watson, jobname, :mutations => self.clean_annotations, :organism => organism).run
+      else
+        @watson = Sequence.job(:is_watson, jobname, :mutations => [self.clean_annotations], :organism => organism).run
+      end
     end
     @watson
   end
 
   property :ensembl_browser => :single2array do
-    "http://jun2011.archive.ensembl.org/Homo_sapiens/Location/View?db=core&r=#{chromosome}:#{position - 100}-#{position + 100}"
+    "http://#{Misc.ensembl_server(self.organism)}/Homo_sapiens/Location/View?db=core&r=#{chromosome}:#{position - 100}-#{position + 100}"
   end
 
   property :chromosome => :array2single do
@@ -39,6 +41,10 @@ module GenomicMutation
 
   property :base => :array2single do
     @base ||= self.clean_annotations.collect{|mut| mut.split(":")[2]}
+  end
+
+  property :reference => :array2single do
+    @reference ||= Sequence.reference_allele_at_chr_positions(organism, chromosome, position)
   end
 
   property :score => :array2single do
@@ -108,7 +114,7 @@ module GenomicMutation
   property :mutated_isoforms => :array2single do
     @mutated_isoforms ||= begin
                             res = Sequence.job(:mutated_isoforms_for_genomic_mutations, jobname, :watson => watson, :organism => organism, :mutations => self.clean_annotations).run.values_at *self
-                            res.each{|list| list.organism = organism}
+                            res.each{|list| list.organism = organism unless list.nil?}
                             res[0].annotate res if res[0].respond_to? :annotate
                             res
                           end
