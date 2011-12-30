@@ -38,6 +38,10 @@ module Entity
         end
       end
 
+      def to_yaml(*args)
+        clean_annotations.to_yaml(*args)
+      end
+
       def consolidate
         self.inject(nil){|acc,e| 
           if acc.nil?
