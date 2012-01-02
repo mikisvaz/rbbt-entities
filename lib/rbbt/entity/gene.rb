@@ -2,6 +2,7 @@ require 'rbbt/entity'
 require 'rbbt/workflow'
 require 'rbbt/sources/organism'
 require 'rbbt/sources/entrez'
+require 'rbbt/sources/matador'
 require 'rbbt/entity/protein'
 require 'rbbt/entity/pmid'
 
@@ -9,6 +10,19 @@ Workflow.require_workflow "Translation"
 
 module Gene
   extend Entity
+
+  def self.ensg2enst(organism, gene)
+    @@ensg2enst ||= {}
+    #@@ensg2enst[organism] ||= Organism.gene_transcripts(organism).tsv(:type => :single, :key_field => "Ensembl Gene ID", :fields => ["Ensembl Transcript ID"], :persist => true).tap{|o| o.unnamed = true}
+    @@ensg2enst[organism] ||= Organism.gene_transcripts(organism).tsv(:type => :flat, :key_field => "Ensembl Gene ID", :fields => ["Ensembl Transcript ID"], :persist => true).tap{|o| o.unnamed = true}
+
+    if Array === gene
+      @@ensg2enst[organism].values_at *gene
+    else
+      @@ensg2enst[organism][gene]
+    end
+  end
+
 
   def self.filter(query, field = nil, options = nil, entity = nil)
     return true if query == entity
@@ -38,7 +52,7 @@ module Gene
 
   property :to => :array2single do |new_format|
     return self if format == new_format
-    to!(new_format).collect!{|v| v.nil? ? nil : v.first}
+    to!(new_format).collect!{|v| Array === v ? v.first : v}
   end
 
   property :strand => :array2single do 
@@ -82,31 +96,26 @@ module Gene
   end
 
   property :transcripts => :array2single do
-    gene_transcripts = Organism.gene_transcripts(organism).tsv :persist => true
-    gene_transcripts.unnamed = true
-    res = gene_transcripts.values_at(*self.ensembl)
-    res.each{|l| Transcript.setup(l, "Ensembl Transcript ID", organism)}
+    res = Gene.ensg2enst(organism, self.ensembl)
+    Transcript.setup(res, "Ensembl Transcript ID", organism)
     res
   end
 
   property :proteins  => :array2single do
     @proteins ||= begin
-                    transcripts = self.transcripts
-                    all_transcripts = Transcript.setup(transcripts.flatten, "Ensembl Transcript ID", organism)
-                    transcript2protein = nil
+                    transcripts = Gene.ensg2enst(organism, self.ensembl)
+
+                    all_transcripts = Transcript.setup(transcripts.flatten.compact.uniq, "Ensembl Transcript ID", organism)
 
                     transcript2protein = Misc.process_to_hash(all_transcripts){|list|
                       list.protein
                     }
 
-                    res = nil
                     res = transcripts.collect{|list|
-                      Protein.setup(transcript2protein.values_at(*list), "Ensembl Protein ID", organism)
+                      Protein.setup(transcript2protein.values_at(*list).compact.uniq, "Ensembl Protein ID", organism)
                     }
 
-                    res.each{|l| 
-                    }
-                    res
+                    Protein.setup(res, "Ensembl Protein ID", organism)
                   end
   end
 
@@ -154,6 +163,59 @@ module Gene
     @gene_sequence.unnamed = true
     @gene_sequence.values_at *self.ensembl
   end
+
+  property :matador_drugs => :array2single do
+    @matador_drugs ||= begin
+                         @@matador ||= Matador.protein_drug.tsv(:persist => false).tap{|o| o.unnamed = true}
+                         
+                           ensg = self._to("Ensembl Gene ID")
+
+                           transcripts = Gene.ensg2enst(organism, ensg)
+
+                           t2ps = Misc.process_to_hash(transcripts.compact.flatten.uniq){|l| Transcript.enst2ensp(organism, l).flatten.compact.uniq}
+
+                           all_proteins = t2ps.values.flatten.compact
+
+                           chemical_pos = @@matador.identify_field "Chemical"
+
+                           p2ds = Misc.process_to_hash(all_proteins){|proteins| 
+                             @@matador.values_at(*proteins).collect{|values| 
+                               next if values.nil?
+                               values[chemical_pos]
+                             }
+                           }
+
+                           res = transcripts.collect do |ts|
+                             ps = t2ps.values_at(*ts).compact.flatten
+                             p2ds.values_at(*ps).flatten.compact.uniq
+                           end
+
+                           res
+                         end
+  end
+
+  property :drugs => :array2single do
+    @matador_drugs = matador_drugs
+  end
+
+  property :kegg_pathway_drugs => :array2single do
+    @kegg_patyhway_drugs ||= begin
+                               self.collect{|gene|
+                                 pathway_genes = gene.kegg_pathways
+                                 next if pathway_genes.nil?
+                                 pathway_genes = pathway_genes.compact.flatten.genes.flatten
+                                 Gene.setup(pathway_genes, "KEGG Gene ID", organism)
+
+                                 pathway_genes.compact.drugs.compact.flatten.uniq
+                               }
+                             end
+  end
+
+  property :pathway_drugs => :array2single do
+    @keep_pathway_drugs ||= kegg_pathway_drugs
+  end
+
+
 end
 
 module Transcript
@@ -164,12 +226,28 @@ module Transcript
 
   self.format = "Ensembl Transcript ID"
 
-
   def self.enst2ensg(organism, transcript)
-    @enst2ensg ||= {}
-    @enst2ensg[organism] ||= Organism.gene_transcripts(organism).tsv(:type => :single, :key_field => "Ensembl Transcript ID", :fields => ["Ensembl Gene ID"], :persist => true)
-    @enst2ensg[organism][transcript]
+    @@enst2ensg ||= {}
+    @@enst2ensg[organism] ||= Organism.gene_transcripts(organism).tsv(:type => :single, :key_field => "Ensembl Transcript ID", :fields => ["Ensembl Gene ID"], :persist => true).tap{|o| o.unnamed = true}
+    res = if Array === transcript
+            @@enst2ensg[organism].values_at *transcript
+          else
+            @@enst2ensg[organism][transcript]
+          end
+    Gene.setup(res, "Ensembl Gene ID", organism)
   end
+
+  def self.enst2ensp(organism, transcript)
+    @@enst2ensp ||= {}
+    @@enst2ensp[organism] ||= Organism.transcripts(organism).tsv(:type => :single, :key_field => "Ensembl Transcript ID", :fields => ["Ensembl Protein ID"], :persist => true)
+    res = if Array === transcript
+            @@enst2ensp[organism].values_at *transcript
+          else
+            @@enst2ensp[organism][transcript]
+          end
+    Protein.setup(res, "Ensembl Protein ID", organism)
+  end
+
 
   property :to! => :array2single do |new_format|
     return self if format == new_format
@@ -185,10 +263,6 @@ module Transcript
     to "Ensembl Transcript ID"
   end
 
-  property :gene => :array2single do
-    Gene.setup(ensembl.collect{|transcript| Transcript.enst2ensg(organism, transcript)}, "Ensembl Gene ID", organism)
-  end
-
   property :sequence => :array2single do
     transcript_sequence = Organism.transcript_sequence(organism).tsv :persist => true
     transcript_sequence.unnamed = true
@@ -201,13 +275,12 @@ module Transcript
     }
   end
 
-  property :protein  => :array2single do
-    transcript_protein = Organism.transcripts(organism).tsv :single, :persist => true, :fields => ["Ensembl Protein ID"]
-    transcript_protein.unnamed = true
+  property :gene => :array2single do
+    Transcript.enst2ensg(organism, self)
+  end
 
-    res = transcript_protein.values_at(*self.ensembl)
-    Protein.setup(res, "Ensembl Protein ID", organism)
-    res
+  property :protein => :array2single do
+    Transcript.enst2ensp(organism, self)
   end
 end
 

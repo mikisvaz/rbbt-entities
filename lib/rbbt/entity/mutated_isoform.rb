@@ -138,7 +138,8 @@ module MutatedIsoform
                                 end
   end
 
-  property :damaged? => :array2single do |methods,threshold|
+  property :damaged? => :array2single do |*args|
+    methods, threshold = args
     @damaged ||= {}
     @damaged[[methods, threshold]] ||= begin
                                          threshold     = 0.8 if threshold.nil?

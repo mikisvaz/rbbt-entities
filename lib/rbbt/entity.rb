@@ -12,7 +12,7 @@ module Entity
     Entity.formats[base.to_s] = base
     base.module_eval do
       class << self
-        attr_accessor :template
+        attr_accessor :template, :list_template
         alias prev_entity_extended extended
       end
 
