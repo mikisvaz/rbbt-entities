@@ -3,6 +3,7 @@ require 'rbbt/workflow'
 require 'rbbt/sources/organism'
 require 'rbbt/sources/entrez'
 require 'rbbt/sources/matador'
+require 'rbbt/sources/cancer'
 require 'rbbt/entity/protein'
 require 'rbbt/entity/pmid'
 
@@ -215,6 +216,9 @@ module Gene
     @keep_pathway_drugs ||= kegg_pathway_drugs
   end
 
+  property :related_cancers => :array2single do
+    @related_cancers ||= Cancer["cancer_genes.tsv"].tsv(:persist => true, :type => :list).values_at(*self.name).collect{|v| v.nil? ? nil : v["Tumour Types (Somatic Mutations)"].split(", ") + v["Tumour Types (Germline Mutations)"].split(", ")}
+  end
 
 end
 
@@ -276,11 +280,11 @@ module Transcript
   end
 
   property :gene => :array2single do
-    Transcript.enst2ensg(organism, self)
+    @gene ||= Transcript.enst2ensg(organism, self)
   end
 
   property :protein => :array2single do
-    Transcript.enst2ensp(organism, self)
+    @protein ||= Transcript.enst2ensp(organism, self)
   end
 end
 

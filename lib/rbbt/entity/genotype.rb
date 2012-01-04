@@ -75,9 +75,11 @@ module Genotype
     end
 
     returns "Ensembl Gene ID"
-    task :damaged_genes => :array do
+    input :methods, :array, "Predictive methods", [:sift, :mutation_assessor]
+    input :threshold, :float, "from 0 to 1", 0.8
+    task :damaged_genes => :array do |methods, threshold|
       set_info :organism, metagenotype.organism
-      samples.collect{|genotype| genotype.damaged_genes}.flatten.uniq
+      samples.collect{|genotype| genotype.damaged_genes(:methods => methods, :threshold => threshold)}.flatten.uniq
     end
 
 
@@ -91,8 +93,10 @@ module Genotype
 
     %w(damaged_genes recurrent_genes all_affected_genes).each do |name|
       define_method name do |*args|
+        options = args.first
         @cache ||= {}
-        @cache[[name, args]] ||= self.job(name, self.jobname).run
+        key = [name, Misc.hash2md5(options || {})]
+        @cache[key] ||= self.job(name, self.jobname, options || {}).run
       end
     end
 

@@ -129,14 +129,25 @@ module GenomicMutation
   end
 
   property :over_gene? => :array2single do |gene|
-    gene = gene.ensembl if gene.respond_to? :ensembl
     @over_genes ||= {}
-    @over_genes[gene] ||= genes.clean_annotations.collect{|list| list.include? gene}
+    @over_genes[gene] ||= begin
+                            gene = gene.ensembl if gene.respond_to? :ensembl
+                            genes.clean_annotations.collect{|list| list.include? gene}
+                          end
   end
 
   property :affected_exons  => :array2single do
     @affected_exons ||= begin
                           Sequence.job(:exons_at_genomic_positions, jobname, :organism => organism, :positions => self.clean_annotations).run.values_at *self
                         end
+  end
+
+  property :damaging? => :array2single do
+    @damaging ||= begin
+                    exon_junctions.zip(mutated_isoforms).each do |exs, mis|
+                      (Array === exs and exs.any?) or
+                      (Array === mis and mis.collect{|mi| mi.damaged?([:sift])})
+                    end
+                  end
   end
 end

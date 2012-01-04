@@ -6,6 +6,7 @@ rbbt-entities=/$PWD filter="*.rb *.rake Rakefile *.rdoc *.R *.sh *.js *.haml *.s
   rbbt=rbbt{
    entity.rb
    entity=entity{
+    study.rb
     pmid.rb
     gene.rb
     protein.rb
