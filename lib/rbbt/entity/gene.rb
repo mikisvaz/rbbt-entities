@@ -220,6 +220,15 @@ module Gene
     @related_cancers ||= Cancer["cancer_genes.tsv"].tsv(:persist => true, :type => :list).values_at(*self.name).collect{|v| v.nil? ? nil : v["Tumour Types (Somatic Mutations)"].split(", ") + v["Tumour Types (Germline Mutations)"].split(", ")}
   end
 
+  property :somatic_snvs => :array2single do
+    @somatic_snvs ||= begin
+                            ranges = chromosome.zip(range).collect do |chromosome, range|
+                              [chromosome, range.begin, range.end] * ":"
+                            end
+                            Sequence.job(:somatic_snvs_at_genomic_ranges, File.join("Gene", self.name), :organism => organism, :ranges  => ranges).run.values_at *ranges
+                          end
+  end
+
 end
 
 module Transcript

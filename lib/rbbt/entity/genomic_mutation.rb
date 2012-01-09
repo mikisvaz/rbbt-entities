@@ -144,9 +144,9 @@ module GenomicMutation
 
   property :damaging? => :array2single do
     @damaging ||= begin
-                    exon_junctions.zip(mutated_isoforms).each do |exs, mis|
+                    exon_junctions.zip(mutated_isoforms).collect do |exs, mis|
                       (Array === exs and exs.any?) or
-                      (Array === mis and mis.collect{|mi| mi.damaged?([:sift])})
+                      (Array === mis and mis.select{|mi| mi.damaged?([:sift])}.any?)
                     end
                   end
   end

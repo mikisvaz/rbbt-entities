@@ -82,7 +82,6 @@ module Genotype
       samples.collect{|genotype| genotype.damaged_genes(:methods => methods, :threshold => threshold)}.flatten.uniq
     end
 
-
     returns "Ensembl Gene ID"
     task :recurrent_genes => :array do
       set_info :organism, metagenotype.organism
