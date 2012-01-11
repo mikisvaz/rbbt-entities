@@ -12,7 +12,7 @@ module Entity
     Entity.formats[base.to_s] = base
     base.module_eval do
       class << self
-        attr_accessor :template, :list_template
+        attr_accessor :template, :list_template, :action_template, :list_action_template
         alias prev_entity_extended extended
       end
 
@@ -40,6 +40,10 @@ module Entity
 
       def to_yaml(*args)
         clean_annotations.to_yaml(*args)
+      end
+
+      def marshal_dump
+        clean_annotations
       end
 
       def consolidate

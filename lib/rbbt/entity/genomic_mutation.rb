@@ -74,21 +74,28 @@ module GenomicMutation
   end
 
   property :type => :array2single do
-    self.to_watson.base.zip(reference).collect do |base,reference|
-      case
-      when base == reference
-        "none"
-      when (base.length > 1 or base == '-')
-        "indel"
-      when (not %w(A G T C).include? base and not %w(A G T C).include? reference) 
-        nil
-      when ((base == "A" or base == "G") and (reference == "A" or reference == "G"))
-        "transition"
-      when ((base == "T" or base == "C") and (reference == "T" or reference == "C"))
-        "transition"
-      else
-        "transversion"
-      end
+    self.base.zip(reference).collect do |base,reference|
+      type = case
+             when base == reference
+               "none"
+             when (base.nil? or reference.nil? or base == "?" or reference == "?")
+               "unknown"
+             when (base.length > 1 or base == '-')
+               "indel"
+             when (not %w(A G T C).include? base and not %w(A G T C).include? reference) 
+               nil
+             when (((Misc::IUPAC2BASE[base] || []) & ["A", "G"]).any? and     ((Misc::IUPAC2BASE[reference] || []) & ["A", "G"]).any?)
+               "transition"
+             when (((Misc::IUPAC2BASE[base] || []) & ["T", "C"]).any? and     ((Misc::IUPAC2BASE[reference] || []) & ["T", "C"]).any?)
+               "transition"
+             when (((Misc::IUPAC2BASE[base] || []) & ["A", "G"]).any? and not ((Misc::IUPAC2BASE[reference] || []) & ["A", "G"]).any?)
+               "transversion"
+             when (((Misc::IUPAC2BASE[base] || []) & ["T", "C"]).any? and not ((Misc::IUPAC2BASE[reference] || []) & ["T", "C"]).any?)
+               "transversion"
+             else
+               "unknown [#{[base, reference] * " - "}]"
+             end
+      type
     end
   end
 

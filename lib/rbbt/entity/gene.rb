@@ -155,7 +155,7 @@ module Gene
 
   property :articles => :array2single do
     @articles ||= begin
-                    PMID.setup(Organism.gene_pmids(organism).tsv(:persist => true, :fields => ["PMID"], :type => :flat).values_at *self.entrez)
+                    PMID.setup(Organism.gene_pmids(organism).tsv(:persist => true, :fields => ["PMID"], :type => :flat, :unnamed => true).values_at *self.entrez)
                   end 
   end
 
@@ -222,11 +222,15 @@ module Gene
 
   property :somatic_snvs => :array2single do
     @somatic_snvs ||= begin
-                            ranges = chromosome.zip(range).collect do |chromosome, range|
-                              [chromosome, range.begin, range.end] * ":"
-                            end
-                            Sequence.job(:somatic_snvs_at_genomic_ranges, File.join("Gene", self.name), :organism => organism, :ranges  => ranges).run.values_at *ranges
-                          end
+                        names = self.name
+                        raise "No organism defined" if self.organism.nil?
+                        clean_organism = self.organism.sub(/\/.*/,'') + '/jun2011'
+                        names.organism = clean_organism
+                        ranges = names.chromosome.zip(name.range).collect do |chromosome, range|
+                          [chromosome, range.begin, range.end] * ":"
+                        end
+                        Sequence.job(:somatic_snvs_at_genomic_ranges, File.join("Gene", (names.compact.sort * ", ")[0..80]), :organism => clean_organism, :ranges  => ranges).run.values_at *ranges
+                      end
   end
 
 end

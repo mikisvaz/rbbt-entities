@@ -177,7 +177,7 @@ module MutatedIsoform
                                    list = missense.zip(missense.protein.to "UniProt/SwissProt ID").collect do |mutation, uniprot|
                                      prot, change = mutation.split(":")
                                      next if uniprot.nil?
-                                     uniprot_change = [uniprot, change]
+                                     uniprot_change = [uniprot.upcase, change.upcase]
                                      correspondance[uniprot_change] ||= []
                                      correspondance[uniprot_change] << mutation
                                      uniprot_change
@@ -194,7 +194,9 @@ module MutatedIsoform
                                    new = TSV.setup({}, :key_field => "Mutated Isoform", :fields => ["Func. Impact"], :type => :list)
 
                                    tsv.each do |key, values|
-                                     correspondance[key.split(" ")].each do |mutation|
+                                     uniprot, change = key.split(" ")
+                                     uniprot_change = [uniprot.upcase, change.upcase]
+                                     correspondance[uniprot_change].each do |mutation|
                                        new[mutation] = values["Func. Impact"]
                                      end
                                    end
