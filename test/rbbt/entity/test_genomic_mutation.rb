@@ -8,15 +8,6 @@ require 'rbbt/entity/genomic_mutation'
 class TestGenomicMutation < Test::Unit::TestCase
   MUTATION = GenomicMutation.setup("10:124745844:A:158", "Test", "Hsa/jun2011")
   SPLICING = GenomicMutation.setup("18:14787040:A", "Test", "Hsa/jun2011")
-  GENOTYPE = GenomicMutation.setup(Rbbt.data.genotype.list, "Test", "Hsa/jun2011")
-
-  def test_genes
-    assert GENOTYPE.genes.flatten.to("Associated Gene Name").include? "PSTK"
-  end
-
-  def test_consolidate
-    assert GENOTYPE.genes.consolidate.to("Associated Gene Name").include? "PSTK"
-  end
 
   def test_mutated_isoforms
     assert MUTATION.mutated_isoforms.length > 1

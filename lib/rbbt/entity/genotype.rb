@@ -144,9 +144,10 @@ module Genotype
   returns "Ensembl Gene ID"
   task :truncated => :array do
     set_info :organism, genotype.organism
-    MutatedIsoform.setup(genotype.mutated_isoforms.flatten.compact, "Hsa/jun2011").
-      select{|isoform_mutation| isoform_mutation.truncated }.
-      protein.gene.to("Ensembl Gene ID").uniq.clean_annotations
+    truncated_isoforms = MutatedIsoform.setup(genotype.mutated_isoforms.flatten.compact, "Hsa/jun2011").select{|isoform_mutation| isoform_mutation.truncated }
+    proteins = truncated_isoforms.protein
+    genes = proteins.gene
+    genes.to("Ensembl Gene ID").uniq.clean_annotations
   end
 
   returns "Ensembl Gene ID"

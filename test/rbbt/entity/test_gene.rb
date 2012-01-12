@@ -24,7 +24,7 @@ class TestGene < Test::Unit::TestCase
   def test_transcripts
     assert CDK5.transcripts.length > 1
     assert_equal "Hsa", CDK5.transcripts.organism
-    assert_equal "Hsa", CDK5.make_list.transcripts.first.organism
+    assert_equal "Hsa", CDK5.make_list.transcripts[0].organism
     assert_equal "Hsa", CDK5.transcripts.make_list.organism
   end
 

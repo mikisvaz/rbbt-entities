@@ -19,6 +19,9 @@ rbbt-entities=/$PWD filter="*.rb *.rake Rakefile *.rdoc *.R *.sh *.js *.haml *.s
  }
  test=test {
   test_helper.rb
+  rbbt=rbbt{
+   test_entity.rb
+  }
  }
  data=data{
  }

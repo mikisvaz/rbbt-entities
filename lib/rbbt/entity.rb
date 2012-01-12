@@ -63,7 +63,7 @@ module Entity
     when (Hash === name and name.size == 1)
       name, type = name.collect.first
     when (String === name or Symbol === name)
-      type = :both
+      type = :single
     else
       raise "Format of name ( => type) not understood: #{name.inspect}"
     end
@@ -71,39 +71,19 @@ module Entity
     name = name.to_s unless String === name
 
     case type
-    when :both
-      self.module_eval do define_method name, &block end
-    when :array
-      self.module_eval do 
-        ary_name = "_ary_" << name
-        define_method ary_name, &block 
-        define_method name do |*args|
-          raise "Method #{ name } only defined for array" unless Array === self
-          self.send(ary_name, *args)
-        end
-      end
-    when :single
-      self.module_eval do 
-        single_name = "_single_" << name
-        define_method single_name, &block 
-        define_method name do |*args|
-          raise "Method #{ name } not defined for array" if Array === self
-          self.send(single_name, *args)
-        end
-      end
-    when :single2array
+    when :single, :single2array
       self.module_eval do 
         single_name = "_single_" << name
         define_method single_name, &block 
         define_method name do |*args|
           if Array === self
-            collect{|e| e.send(single_name, *args)}
+            self.collect{|e| e.send(name, *args)}
           else
             self.send(single_name, *args)
           end
         end
       end
-    when :array2single
+    when :array, :array2single
       self.module_eval do 
         ary_name = "_ary_" << name
         define_method ary_name, &block 
@@ -112,7 +92,7 @@ module Entity
           when Array === self
             self.send(ary_name, *args)
           when (Array === self.container and self.container.respond_to? ary_name)
-            res = self.container.send(ary_name, *args)
+            res = self.container.send(name, *args)
             if Hash === res
               res[self]
             else
@@ -127,18 +107,21 @@ module Entity
     end
   end
 
-  def property2(name, &block)
-    case
-    when (Hash === name and name.size == 1)
-      name, type = name.collect.first
-    when (String === name or Symbol === name)
-      type = :both
-    else
-      raise "Format of name ( => type) not understood: #{name.inspect}"
+  UNPERSISTED_PREFIX = "entity_unpersisted_property_"
+  def persist(method_name, type = nil, options = {})
+    type = :memory if type.nil?
+
+    self.module_eval do
+      orig_name = UNPERSISTED_PREFIX + method_name.to_s
+      alias_method orig_name, method_name unless instance_methods.include? orig_name
+
+      define_method method_name do |*args|
+        Persist.persist(__method__.to_s, type, options.merge(:other => {:args => args, :id => self.id})) do
+          self.send(orig_name, *args)
+        end
+      end
     end
-
-    name = name.to_s unless String === name
-
   end
+
 end
 

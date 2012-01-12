@@ -14,7 +14,6 @@ module Gene
 
   def self.ensg2enst(organism, gene)
     @@ensg2enst ||= {}
-    #@@ensg2enst[organism] ||= Organism.gene_transcripts(organism).tsv(:type => :single, :key_field => "Ensembl Gene ID", :fields => ["Ensembl Transcript ID"], :persist => true).tap{|o| o.unnamed = true}
     @@ensg2enst[organism] ||= Organism.gene_transcripts(organism).tsv(:type => :flat, :key_field => "Ensembl Gene ID", :fields => ["Ensembl Transcript ID"], :persist => true).tap{|o| o.unnamed = true}
 
     if Array === gene
@@ -27,7 +26,7 @@ module Gene
 
   def self.filter(query, field = nil, options = nil, entity = nil)
     return true if query == entity
-    
+
     return true if query == Gene.setup(entity.dup, options.merge(:format => field)).name
 
     false
@@ -45,93 +44,103 @@ module Gene
     new_organism = new_organism * "/"
     Gene.setup(Organism[organism]["ortholog_#{other}"].tsv(:persist => true).values_at(*self.ensembl).collect{|l| l.first}, "Ensembl Gene ID", new_organism)
   end
+  persist :ortholog 
 
   property :to! => :array2single do |new_format|
     return self if format == new_format
     Gene.setup(Translation.job(:tsv_translate, "", :organism => organism, :genes => self, :format => new_format).exec.values_at(*self), new_format, organism)
   end
+  persist :to!
 
   property :to => :array2single do |new_format|
     return self if format == new_format
     to!(new_format).collect!{|v| Array === v ? v.first : v}
   end
+  persist :to 
 
   property :strand => :array2single do 
-    @strand ||= Organism.gene_positions(organism).tsv(:fields => ["Strand"], :type => :single, :persist => true).values_at *self
+    Organism.gene_positions(organism).tsv(:fields => ["Strand"], :type => :single, :persist => true).values_at *self
   end
+  persist :strand
 
   property :ensembl => :array2single do
-    @ensembl ||= to "Ensembl Gene ID"
+    to "Ensembl Gene ID"
   end
+  persist :ensembl
 
   property :entrez => :array2single do
-    @entrez ||= to "Entrez Gene ID"
+    to "Entrez Gene ID"
   end
+  persist :entrez
 
   property :uniprot => :array2single do
-    @uniprot ||= to "UniProt/SwissProt Accession"
+    to "UniProt/SwissProt Accession"
   end
+  persist :uniprot
 
   property :name => :array2single do
-    @name ||= to "Associated Gene Name"
+    to "Associated Gene Name"
   end
+  persist :name
 
   property :chr_start => :array2single do
-    @chr_start = begin
-                   Organism.gene_positions(organism).tsv(:persist => true, :type => :single, :cast => :to_i, :fields => ["Gene Start"]).values_at *self
-                 end
+    Organism.gene_positions(organism).tsv(:persist => true, :type => :single, :cast => :to_i, :fields => ["Gene Start"]).values_at *self
   end
+  persist :chr_start
 
   property :go_bp_terms => :array2single do
-    @go_bp_terms ||= Organism.gene_go_bp(organism).tsv(:persist => true, :key_field => "Ensembl Gene ID", :fields => ["GO ID"], :type => :flat).values_at *self.ensembl
+    Organism.gene_go_bp(organism).tsv(:persist => true, :key_field => "Ensembl Gene ID", :fields => ["GO ID"], :type => :flat).values_at *self.ensembl
   end
+  persist :go_bp_terms
 
   property :long_name => :single2array do
     gene = Entrez.get_gene(to("Entrez Gene ID"))
     gene.nil? ? nil : gene.description.flatten.first
   end
+  persist :long_name
 
   property :description => :single2array do
     gene = Entrez.get_gene(to("Entrez Gene ID"))
     gene.nil? ? nil : gene.summary.flatten.first
   end
+  persist :description
 
   property :transcripts => :array2single do
     res = Gene.ensg2enst(organism, self.ensembl)
     Transcript.setup(res, "Ensembl Transcript ID", organism)
     res
   end
+  persist :transcripts
 
   property :proteins  => :array2single do
-    @proteins ||= begin
-                    transcripts = Gene.ensg2enst(organism, self.ensembl)
+    transcripts = Gene.ensg2enst(organism, self.ensembl)
 
-                    all_transcripts = Transcript.setup(transcripts.flatten.compact.uniq, "Ensembl Transcript ID", organism)
+    all_transcripts = Transcript.setup(transcripts.flatten.compact.uniq, "Ensembl Transcript ID", organism)
 
-                    transcript2protein = Misc.process_to_hash(all_transcripts){|list|
-                      list.protein
-                    }
+    transcript2protein = Misc.process_to_hash(all_transcripts){|list|
+      list.protein
+    }
 
-                    res = transcripts.collect{|list|
-                      Protein.setup(transcript2protein.values_at(*list).compact.uniq, "Ensembl Protein ID", organism)
-                    }
+    res = transcripts.collect{|list|
+      Protein.setup(transcript2protein.values_at(*list).compact.uniq, "Ensembl Protein ID", organism)
+    }
 
-                    Protein.setup(res, "Ensembl Protein ID", organism)
-                  end
+    Protein.setup(res, "Ensembl Protein ID", organism)
   end
+  persist :proteins
 
   property :max_transcript_length => :array2single do
     transcripts.collect{|list| list.sequence_length.compact.max}
   end
+  persist :max_transcript_length
 
   property :max_protein_length => :array2single do
-    @max_protein_length ||= begin
-                              proteins = self.proteins
-                              all_proteins = Protein.setup(proteins.flatten, "Ensembl Protein ID", organism)
-                              lengths = Misc.process_to_hash(all_proteins){|list| list.sequence_length}
-                              proteins.collect{|list| lengths.values_at(*list).compact.max}
-                            end
+    proteins = self.proteins
+    all_proteins = Protein.setup(proteins.flatten, "Ensembl Protein ID", organism)
+    lengths = Misc.process_to_hash(all_proteins){|list| list.sequence_length}
+    proteins.collect{|list| lengths.values_at(*list).compact.max}
   end
+  persist :max_protein_length
 
   property :chromosome => :array2single do
     chr = Organism.gene_positions(organism).tsv :fields => ["Chromosome Name"], :type => :single, :persist => true
@@ -144,6 +153,7 @@ module Gene
       chr[to("Ensembl Gene ID")]
     end
   end
+  persist :chromosome
 
   property :range => :array2single do
     pos = Organism.gene_positions(organism).tsv :fields => ["Gene Start", "Gene End"], :type => :list, :persist => true, :cast => :to_i
@@ -152,86 +162,87 @@ module Gene
       Range.new *pos[gene]
     end
   end
+  persist :range
 
   property :articles => :array2single do
-    @articles ||= begin
-                    PMID.setup(Organism.gene_pmids(organism).tsv(:persist => true, :fields => ["PMID"], :type => :flat, :unnamed => true).values_at *self.entrez)
-                  end 
+    PMID.setup(Organism.gene_pmids(organism).tsv(:persist => true, :fields => ["PMID"], :type => :flat, :unnamed => true).values_at *self.entrez)
   end
+  persist :articles
 
   property :sequence => :array2single do
-    @gene_sequence ||= Organism.gene_sequence(organism).tsv :persist => true
+    Organism.gene_sequence(organism).tsv :persist => true
     @gene_sequence.unnamed = true
     @gene_sequence.values_at *self.ensembl
   end
+  persist :sequence
 
   property :matador_drugs => :array2single do
-    @matador_drugs ||= begin
-                         @@matador ||= Matador.protein_drug.tsv(:persist => false).tap{|o| o.unnamed = true}
-                         
-                           ensg = self._to("Ensembl Gene ID")
+    @@matador ||= Matador.protein_drug.tsv(:persist => false).tap{|o| o.unnamed = true}
 
-                           transcripts = Gene.ensg2enst(organism, ensg)
+    ensg = self._to("Ensembl Gene ID")
 
-                           t2ps = Misc.process_to_hash(transcripts.compact.flatten.uniq){|l| Transcript.enst2ensp(organism, l).flatten.compact.uniq}
+    transcripts = Gene.ensg2enst(organism, ensg)
 
-                           all_proteins = t2ps.values.flatten.compact
+    t2ps = Misc.process_to_hash(transcripts.compact.flatten.uniq){|l| Transcript.enst2ensp(organism, l).flatten.compact.uniq}
 
-                           chemical_pos = @@matador.identify_field "Chemical"
+    all_proteins = t2ps.values.flatten.compact
 
-                           p2ds = Misc.process_to_hash(all_proteins){|proteins| 
-                             @@matador.values_at(*proteins).collect{|values| 
-                               next if values.nil?
-                               values[chemical_pos]
-                             }
-                           }
+    chemical_pos = @@matador.identify_field "Chemical"
 
-                           res = transcripts.collect do |ts|
-                             ps = t2ps.values_at(*ts).compact.flatten
-                             p2ds.values_at(*ps).flatten.compact.uniq
-                           end
+    p2ds = Misc.process_to_hash(all_proteins){|proteins| 
+      @@matador.values_at(*proteins).collect{|values| 
+        next if values.nil?
+        values[chemical_pos]
+      }
+    }
 
-                           res
-                         end
+    res = transcripts.collect do |ts|
+      ps = t2ps.values_at(*ts).compact.flatten
+      p2ds.values_at(*ps).flatten.compact.uniq
+    end
+
+    res
   end
+  persist :matador_drugs
 
   property :drugs => :array2single do
     @matador_drugs = matador_drugs
   end
+  persist :drugs
 
   property :kegg_pathway_drugs => :array2single do
-    @kegg_patyhway_drugs ||= begin
-                               self.collect{|gene|
-                                 pathway_genes = gene.kegg_pathways
-                                 next if pathway_genes.nil?
-                                 pathway_genes = pathway_genes.compact.flatten.genes.flatten
-                                 Gene.setup(pathway_genes, "KEGG Gene ID", organism)
+    self.collect{|gene|
+      pathway_genes = gene.kegg_pathways
+      next if pathway_genes.nil?
+      pathway_genes = pathway_genes.compact.flatten.genes.flatten
+      Gene.setup(pathway_genes, "KEGG Gene ID", organism)
 
-                                 pathway_genes.compact.drugs.compact.flatten.uniq
-                               }
-                             end
+      pathway_genes.compact.drugs.compact.flatten.uniq
+    }
   end
+  persist :kegg_pathway_drugs
 
   property :pathway_drugs => :array2single do
-    @keep_pathway_drugs ||= kegg_pathway_drugs
+    kegg_pathway_drugs
   end
+  persist :pathway_drugs
 
   property :related_cancers => :array2single do
-    @related_cancers ||= Cancer["cancer_genes.tsv"].tsv(:persist => true, :type => :list).values_at(*self.name).collect{|v| v.nil? ? nil : v["Tumour Types (Somatic Mutations)"].split(", ") + v["Tumour Types (Germline Mutations)"].split(", ")}
+    Cancer["cancer_genes.tsv"].tsv(:persist => true, :type => :list).values_at(*self.name).collect{|v| v.nil? ? nil : v["Tumour Types (Somatic Mutations)"].split(", ") + v["Tumour Types (Germline Mutations)"].split(", ")}
   end
+  persist :related_cancers
 
   property :somatic_snvs => :array2single do
-    @somatic_snvs ||= begin
-                        names = self.name
-                        raise "No organism defined" if self.organism.nil?
-                        clean_organism = self.organism.sub(/\/.*/,'') + '/jun2011'
-                        names.organism = clean_organism
-                        ranges = names.chromosome.zip(name.range).collect do |chromosome, range|
-                          [chromosome, range.begin, range.end] * ":"
-                        end
-                        Sequence.job(:somatic_snvs_at_genomic_ranges, File.join("Gene", (names.compact.sort * ", ")[0..80]), :organism => clean_organism, :ranges  => ranges).run.values_at *ranges
-                      end
+    names = self.name
+    raise "No organism defined" if self.organism.nil?
+    clean_organism = self.organism.sub(/\/.*/,'') + '/jun2011'
+    names.organism = clean_organism
+    ranges = names.chromosome.zip(name.range).collect do |chromosome, range|
+      [chromosome, range.begin, range.end] * ":"
+    end
+    Sequence.job(:somatic_snvs_at_genomic_ranges, File.join("Gene", (names.compact.sort * ", ")[0..80]), :organism => clean_organism, :ranges  => ranges).run.values_at *ranges
   end
+  persist :somatic_snvs
 
 end
 
@@ -293,11 +304,11 @@ module Transcript
   end
 
   property :gene => :array2single do
-    @gene ||= Transcript.enst2ensg(organism, self)
+    Transcript.enst2ensg(organism, self)
   end
 
   property :protein => :array2single do
-    @protein ||= Transcript.enst2ensp(organism, self)
+    Transcript.enst2ensp(organism, self)
   end
 end
 

@@ -18,53 +18,60 @@ module Protein
   self.format = "Ensembl Protein ID"
 
   def self.ensp2sequence(organism, protein)
-    @ensp2sequence ||= {}
-    @ensp2sequence[organism] ||= Organism.protein_sequence(organism).tsv :persist => true
+    @@ensp2sequence ||= {}
+    @@ensp2sequence[organism] ||= Organism.protein_sequence(organism).tsv :persist => true
     if Array === protein
-      @ensp2sequence[organism].values_at *protein
+      @@ensp2sequence[organism].values_at *protein
     else
-      @ensp2sequence[organism][protein]
+      @@ensp2sequence[organism][protein]
     end
   end
 
   def self.ensp2enst(organism, protein)
-    @ensp2enst ||= {}
-    @ensp2enst[organism] ||= Organism.transcripts(organism).tsv(:type => :single, :key_field => "Ensembl Protein ID", :fields => ["Ensembl Transcript ID"], :persist => true)
-    @ensp2enst[organism][protein]
+    @@ensp2enst ||= {}
+    @@ensp2enst[organism] ||= Organism.transcripts(organism).tsv(:type => :single, :key_field => "Ensembl Protein ID", :fields => ["Ensembl Transcript ID"], :persist => true)
+    @@ensp2enst[organism][protein]
   end
 
   property :uniprot => :array2single do
-    @uniprot ||= to "UniProt/SwissProt Accession"
+    to "UniProt/SwissProt Accession"
   end
+  persist :uniprot
 
   property :ensembl => :array2single do
-    @ensembl = to "Ensembl Protein ID"
+    to "Ensembl Protein ID"
   end
+  persist :ensembl
 
   property :transcript => :array2single do
     ensembl.collect{|ensp|
       Protein.ensp2enst(organism, ensp)
     }
   end
+  persist :transcript
 
   property :ensembl_protein_image_url => :single2array do
     ensembl_url = if organism == "Hsa" then "www.ensembl.org" else "#{organism.sub(/.*\//,'')}.archive.ensembl.org" end
     "http://#{ensembl_url}/Homo_sapiens/Component/Transcript/Web/TranslationImage?db=core;p=#{ensembl};_rmd=d2a8;export=svg"
   end
+  persist :ensembl_protein_image_url
 
   property :to! => :array2single do |new_format|
     return self if format == new_format
     Protein.setup(Translation.job(:translate_protein, "", :organism => organism, :proteins => self, :format => new_format).exec, new_format, organism)
   end
+  persist :to!
 
   property :to => :array2single do |new_format|
     return self if format == new_format
     to!(new_format).collect!{|v| v.nil? ? nil : v.first}
   end
+  persist :to
 
-  property :gene do
+  property :gene => :array do
     Gene.setup(to("Ensembl Protein ID").clean_annotations, "Ensembl Protein ID", organism)
   end
+  persist :gene
 
   property :pfam => :array2single do
     index = Organism.gene_pfam(organism).tsv :flat, :persist => true
@@ -72,13 +79,16 @@ module Protein
     pfam = index.values_at(*self).flatten
     Pfam.setup pfam
   end
+  persist :pfam
 
   property :sequence => :array2single do
     Protein.ensp2sequence(organism, self.ensembl)
   end
+  persist :sequence
 
   property :sequence_length => :array2single do
     sequence.collect{|seq| seq.nil? ? nil : seq.length}
   end
+  persist :sequence_length
 end
 
