@@ -131,17 +131,21 @@ module MutatedIsoform
           raise "Unknown predictive method: #{ method }"
         end
       }
-      scores = values.shift
-      scores = scores.zip(*values)
+      if values.compact.empty?
+        return [nil] * self.length
+      else
+        scores = values.shift
+        scores = scores.zip(*values)
 
-      scores.collect{|p|
-        p = p.compact
-        if p.empty?
-          nil
-        else
-          p.inject(0.0){|acc, e| acc += e} / p.length
-        end
-      }
+        scores.collect{|p|
+          p = p.compact
+          if p.empty?
+            nil
+          else
+            p.inject(0.0){|acc, e| acc += e} / p.length
+          end
+        }
+      end
     end
   end
   persist :damage_scores

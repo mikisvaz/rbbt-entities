@@ -158,10 +158,22 @@ module GenomicMutation
   persist :in_exon_junction?
 
   property :over_gene? => :array2single do |gene|
-    gene = gene.ensembl if gene.respond_to? :ensembl
-    genes.clean_annotations.collect{|list| list.include? gene}
+    if Gene === gene
+      range = gene.range
+      chromosome = gene.chromosome
+    else
+      range = Gene.setup(gene.dup, "Ensembl Gene ID", organism).range
+      chromosome = Gene.setup(gene.dup, "Ensembl Gene ID", organism).chromosome
+    end
+
+    if range.nil?
+      [false] * self.length
+    else
+      chromosome.zip(position).collect{|chr,pos| chr == chromosome and range.include? pos}
+    end
+
+    #genes.clean_annotations.collect{|list| list.include? gene}
   end
-  persist :over_gene?
 
   property :affected_exons  => :array2single do
     Sequence.job(:exons_at_genomic_positions, jobname, :organism => organism, :positions => self.clean_annotations).run.values_at *self

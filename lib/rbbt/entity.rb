@@ -87,6 +87,7 @@ module Entity
       self.module_eval do 
         ary_name = "_ary_" << name
         define_method ary_name, &block 
+
         define_method name do |*args|
           case
           when Array === self
@@ -103,6 +104,7 @@ module Entity
             Hash === res ? res[self] : res[0]
           end
         end
+
       end
     end
   end
