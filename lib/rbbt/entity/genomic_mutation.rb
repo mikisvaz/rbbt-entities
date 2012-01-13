@@ -33,6 +33,10 @@ module GenomicMutation
     @watson
   end
 
+  def orig_watson
+    @watson
+  end
+
   property :ensembl_browser => :single2array do
     "http://#{Misc.ensembl_server(self.organism)}/Homo_sapiens/Location/View?db=core&r=#{chromosome}:#{position - 100}-#{position + 100}"
   end

@@ -43,7 +43,7 @@ module Genotype
 
         def metagenotype
           if @metagenotype.nil?
-            @metagenotype = GenomicMutation.setup(self.dup.flatten, jobname, self[0].organism)
+            @metagenotype = GenomicMutation.setup(self.dup.flatten, jobname, self[0].organism, self[0].orig_watson)
             @metagenotype.extend Genotype unless Genotype === @metagenotype
           end
           @metagenotype
