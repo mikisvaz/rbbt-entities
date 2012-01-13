@@ -16,13 +16,19 @@ module GenomicMutation
 
   self.format = "Genomic Mutation"
 
-  def watson
-    if @watson.nil?
-      if Array === self
+  property :guess_watson => :array do
+     if Array === self
         @watson = Sequence.job(:is_watson, jobname, :mutations => self.clean_annotations, :organism => organism).run
       else
         @watson = Sequence.job(:is_watson, jobname, :mutations => [self.clean_annotations], :organism => organism).run
       end
+  end
+  persist :guess_watson
+
+  def watson
+    if @watson.nil?
+      @watson = :missing
+      @watson = guess_watson
     end
     @watson
   end

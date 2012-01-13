@@ -240,7 +240,7 @@ module Gene
     ranges = names.chromosome.zip(name.range).collect do |chromosome, range|
       [chromosome, range.begin, range.end] * ":"
     end
-    Sequence.job(:somatic_snvs_at_genomic_ranges, File.join("Gene", (names.compact.sort * ", ")[0..80]), :organism => clean_organism, :ranges  => ranges).run.values_at *ranges
+    Sequence.job(:somatic_snvs_at_genomic_ranges, File.join("Gene", (names.compact.sort * ", ")[0..80]), :organism => clean_organism, :ranges  => ranges).fork.join.load.values_at *ranges
   end
   persist :somatic_snvs
 
