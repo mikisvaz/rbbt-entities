@@ -5,11 +5,11 @@
 
 Gem::Specification.new do |s|
   s.name = %q{rbbt-entities}
-  s.version = "1.0.0"
+  s.version = "1.1.0"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Miguel Vazquez"]
-  s.date = %q{2011-11-17}
+  s.date = %q{2012-01-13}
   s.description = %q{Entities for handling tsv files, caches, etc}
   s.email = %q{miguel.vazquez@cnio.es}
   s.extra_rdoc_files = [
@@ -25,7 +25,8 @@ Gem::Specification.new do |s|
     "lib/rbbt/entity/misc.rb",
     "lib/rbbt/entity/mutated_isoform.rb",
     "lib/rbbt/entity/pmid.rb",
-    "lib/rbbt/entity/protein.rb"
+    "lib/rbbt/entity/protein.rb",
+    "lib/rbbt/entity/transcript.rb"
   ]
   s.homepage = %q{http://github.com/mikisvaz/rbbt-util}
   s.require_paths = ["lib"]
