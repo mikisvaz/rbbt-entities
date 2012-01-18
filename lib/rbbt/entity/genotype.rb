@@ -145,6 +145,7 @@ module Genotype
   task :truncated => :array do
     set_info :organism, genotype.organism
     truncated_isoforms = MutatedIsoform.setup(genotype.mutated_isoforms.flatten.compact, "Hsa/jun2011").select{|isoform_mutation| isoform_mutation.truncated }
+
     proteins = truncated_isoforms.protein
     genes = proteins.gene
     genes.to("Ensembl Gene ID").uniq.clean_annotations

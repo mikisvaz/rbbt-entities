@@ -8,6 +8,8 @@ require 'rbbt/sources/uniprot'
 require 'rbbt/entity/gene'
 require 'nokogiri'
 
+Workflow.require_workflow 'structure'
+
 module MutatedIsoform
   extend Entity
   self.annotation :organism
@@ -51,11 +53,13 @@ module MutatedIsoform
 
   property :marked_svg => :single2array do
     svg = Open.read(protein.ensembl_protein_image_url)
+    
     seq_len = protein.sequence_length
     position = self.position
 
 
     doc = Nokogiri::XML(svg)
+    return nil unless doc.css('svg')
     width = doc.css('svg').first.attr('width').to_f
     height = doc.css('svg').first.attr('height').to_f
     start = doc.css('rect.ac').first.attr('x').to_f
@@ -230,7 +234,20 @@ module MutatedIsoform
   property :pdbs => :single do
     uniprot = self.transcript.protein.uniprot
     next if uniprot.nil?
-    Uniprot.pdbs_covering_aa_position(uniprot, self.position)
+    UniProt.pdbs_covering_aa_position(uniprot, self.position)
   end
   persist :pdbs
+
+  property :pdbs_and_positions => :single do
+    pdbs.collect do |pdb, info|
+      [pdb, Structure.job(:sequence_position_in_pdb, "Protein: #{ self }", :sequence => protein.sequence, :organism => organism, :position => position, :pdb => pdb).run]
+    end
+  end
 end
+
+
+if __FILE__ == $0
+  ddd MutatedIsoform.setup("ENSP00000288602:Q435R", "Hsa/jun2011").pdbs_and_positions
+end
+
+

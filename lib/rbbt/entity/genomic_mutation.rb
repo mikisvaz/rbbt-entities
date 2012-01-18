@@ -142,7 +142,7 @@ module GenomicMutation
   property :mutated_isoforms => :array2single do
     res = Sequence.job(:mutated_isoforms_for_genomic_mutations, jobname, :watson => watson, :organism => organism, :mutations => self.clean_annotations).run.values_at *self
     res.each{|list| list.organism = organism unless list.nil?}
-    res[0].annotate res if res[0].respond_to? :annotate
+    res.compact[0].annotate res if res.compact[0].respond_to? :annotate
     res
   end
   persist :mutated_isoforms
@@ -160,20 +160,21 @@ module GenomicMutation
   property :over_gene? => :array2single do |gene|
     if Gene === gene
       range = gene.range
-      chromosome = gene.chromosome
+      gene_chromosome = gene.chromosome
     else
       range = Gene.setup(gene.dup, "Ensembl Gene ID", organism).range
-      chromosome = Gene.setup(gene.dup, "Ensembl Gene ID", organism).chromosome
+      gene_chromosome = Gene.setup(gene.dup, "Ensembl Gene ID", organism).chromosome
     end
 
     if range.nil?
       [false] * self.length
     else
-      chromosome.zip(position).collect{|chr,pos| chr == chromosome and range.include? pos}
+      chromosome.zip(position).collect{|chr,pos| chr == gene_chromosome and range.include? pos}
     end
 
     #genes.clean_annotations.collect{|list| list.include? gene}
   end
+  persist :over_gene?
 
   property :affected_exons  => :array2single do
     Sequence.job(:exons_at_genomic_positions, jobname, :organism => organism, :positions => self.clean_annotations).run.values_at *self
@@ -181,9 +182,10 @@ module GenomicMutation
   persist :affected_exons
 
   property :damaging? => :array2single do |*args|
+    damaged_mutated_isoforms = mutated_isoforms.compact.flatten.select{|mi| mi.damaged?(*args)}
     exon_junctions.zip(mutated_isoforms).collect do |exs, mis|
       (Array === exs and exs.any?) or
-      (Array === mis and mis.select{|mi| mi.damaged?(*args)}.any?)
+      (Array === mis and (damaged_mutated_isoforms & mis).any?)
     end
   end
   persist :damaging?

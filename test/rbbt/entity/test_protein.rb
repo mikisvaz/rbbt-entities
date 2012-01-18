@@ -4,6 +4,7 @@ require 'test/unit'
 require 'rbbt/util/tmpfile'
 require 'test/unit'
 require 'rbbt/entity/protein'
+require 'rbbt/entity/mutated_isoform'
 
 class TestProtein < Test::Unit::TestCase
   PROTEIN = Protein.setup("ENSP00000275493", "Hsa/jun2011")
@@ -20,6 +21,11 @@ class TestProtein < Test::Unit::TestCase
 
   def test_gene
     assert_equal "EGFR", PROTEIN.gene.to("Associated Gene Name")
+  end
+
+  def test_protein
+    ddd MutatedIsoform.setup(["ENSP00000322422:K168FrameShift"], "Hsa/may2009").info
+    ddd MutatedIsoform.setup(["ENSP00000322422:K168FrameShift"], "Hsa/may2009").protein
   end
 
 end

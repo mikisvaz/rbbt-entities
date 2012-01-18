@@ -36,12 +36,10 @@ module Protein
   property :uniprot => :array2single do
     to "UniProt/SwissProt Accession"
   end
-  persist :uniprot
 
   property :ensembl => :array2single do
     to "Ensembl Protein ID"
   end
-  persist :ensembl
 
   property :transcript => :array2single do
     ensembl.collect{|ensp|
@@ -56,22 +54,20 @@ module Protein
   end
   persist :ensembl_protein_image_url
 
-  property :to! => :array2single do |new_format|
-    return self if format == new_format
-    Protein.setup(Translation.job(:translate_protein, "", :organism => organism, :proteins => self, :format => new_format).exec, new_format, organism)
-  end
-  persist :to!
-
   property :to => :array2single do |new_format|
+    return self if format == new_format
+    Protein.setup(Translation.job(:tsv_translate_protein, "", :organism => organism, :proteins => self, :format => new_format).exec.values_at(*self), new_format, organism)
+  end
+
+  property :__to => :array2single do |new_format|
     return self if format == new_format
     to!(new_format).collect!{|v| v.nil? ? nil : v.first}
   end
-  persist :to
 
   property :gene => :array do
     Gene.setup(to("Ensembl Protein ID").clean_annotations, "Ensembl Protein ID", organism)
   end
-  persist :gene
+  persist :gene #, :yaml, :file => '/tmp/testes'
 
   property :pfam => :array2single do
     index = Organism.gene_pfam(organism).tsv :flat, :persist => true
@@ -90,5 +86,6 @@ module Protein
     sequence.collect{|seq| seq.nil? ? nil : seq.length}
   end
   persist :sequence_length
+
 end
 

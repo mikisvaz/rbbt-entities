@@ -2,8 +2,11 @@ require 'rbbt/annotations'
 
 module Entity
   class << self
-    attr_accessor :formats
+    attr_accessor :formats, :entity_property_cache, :entity_list_cache
   end
+
+  self.entity_property_cache = "cache/entity_property"
+  self.entity_list_cache = "cache/entity_list"
   self.formats = {}
   
   def self.extended(base)
@@ -112,6 +115,7 @@ module Entity
   UNPERSISTED_PREFIX = "entity_unpersisted_property_"
   def persist(method_name, type = nil, options = {})
     type = :memory if type.nil?
+    options = Misc.add_defaults options, :dir => Entity.entity_property_cache
 
     self.module_eval do
       orig_name = UNPERSISTED_PREFIX + method_name.to_s

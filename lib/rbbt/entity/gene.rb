@@ -47,17 +47,15 @@ module Gene
   end
   persist :ortholog 
 
-  property :to! => :array2single do |new_format|
+  property :to => :array2single do |new_format|
     return self if format == new_format
     Gene.setup(Translation.job(:tsv_translate, "", :organism => organism, :genes => self, :format => new_format).exec.values_at(*self), new_format, organism)
   end
-  persist :to!
 
-  property :to => :array2single do |new_format|
+  property :__to => :array2single do |new_format|
     return self if format == new_format
     to!(new_format).collect!{|v| Array === v ? v.first : v}
   end
-  persist :to 
 
   property :strand => :array2single do 
     Organism.gene_positions(organism).tsv(:fields => ["Strand"], :type => :single, :persist => true).values_at *self
@@ -67,12 +65,10 @@ module Gene
   property :ensembl => :array2single do
     to "Ensembl Gene ID"
   end
-  persist :ensembl
 
   property :entrez => :array2single do
     to "Entrez Gene ID"
   end
-  persist :entrez
 
   property :uniprot => :array2single do
     to "UniProt/SwissProt Accession"
@@ -180,7 +176,7 @@ module Gene
   property :matador_drugs => :array2single do
     @@matador ||= Matador.protein_drug.tsv(:persist => false).tap{|o| o.unnamed = true}
 
-    ensg = self._to("Ensembl Gene ID")
+    ensg = self.to("Ensembl Gene ID")
 
     transcripts = Gene.ensg2enst(organism, ensg)
 
@@ -239,6 +235,7 @@ module Gene
     clean_organism = self.organism.sub(/\/.*/,'') + '/jun2011'
     names.organism = clean_organism
     ranges = names.chromosome.zip(name.range).collect do |chromosome, range|
+      next if range.nil?
       [chromosome, range.begin, range.end] * ":"
     end
     Sequence.job(:somatic_snvs_at_genomic_ranges, File.join("Gene", (names.compact.sort * ", ")[0..80]), :organism => clean_organism, :ranges  => ranges).fork.join.load.values_at *ranges
