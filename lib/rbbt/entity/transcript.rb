@@ -1,5 +1,4 @@
 require 'rbbt/entity'
-require 'rbbt/entity/gene'
 
 module Transcript
   extend Entity
@@ -17,7 +16,8 @@ module Transcript
           else
             @@enst2ensg[organism][transcript]
           end
-    Gene.setup(res, "Ensembl Gene ID", organism)
+    Gene.setup(res, "Ensembl Gene ID", organism) if defined? Gene
+    res
   end
 
   def self.enst2ensp(organism, transcript)
@@ -34,7 +34,9 @@ module Transcript
 
   property :to! => :array2single do |new_format|
     return self if format == new_format
-    Gene.setup(Translation.job(:tsv_translate_probe, "", :organism => organism, :probes => self, :format => new_format).exec.values_at(*self), new_format, organism)
+    res = Translation.job(:tsv_translate_probe, "", :organism => organism, :probes => self, :format => new_format).exec.values_at(*self)
+    Gene.setup(res, "Ensembl Gene ID", organism) if defined? Gene
+    res
   end
 
   property :to => :array2single do |new_format|

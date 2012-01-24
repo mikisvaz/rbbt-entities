@@ -158,21 +158,16 @@ module GenomicMutation
   persist :in_exon_junction?
 
   property :over_gene? => :array2single do |gene|
-    if Gene === gene
-      range = gene.range
-      gene_chromosome = gene.chromosome
-    else
-      range = Gene.setup(gene.dup, "Ensembl Gene ID", organism).range
-      gene_chromosome = Gene.setup(gene.dup, "Ensembl Gene ID", organism).chromosome
-    end
+    gene = Gene.setup(gene.dup, "Ensembl Gene ID", organism) unless Gene === gene
 
-    if range.nil?
+    gene_range = gene.range
+    gene_chromosome = gene.chromosome
+
+    if gene_range.nil?
       [false] * self.length
     else
-      chromosome.zip(position).collect{|chr,pos| chr == gene_chromosome and range.include? pos}
+      chromosome.zip(position).collect{|chr,pos| chr == gene_chromosome and gene_range.include? pos}
     end
-
-    #genes.clean_annotations.collect{|list| list.include? gene}
   end
   persist :over_gene?
 
