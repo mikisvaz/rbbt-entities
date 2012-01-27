@@ -200,12 +200,10 @@ module MutatedIsoform
         uniprot_change
       end.compact
 
-      #return TSV.setup({}, :key_field => "Mutated Isoform", :fields => ["Func. Impact"], :type => :list) if list.empty?
       return [nil] * self.length if list.empty?
 
       tsv = MutationAssessor.chunked_predict(list.sort_by{|p| p * "_"})
 
-      #return TSV.setup({}, :key_field => "Mutated Isoform", :fields => ["Func. Impact"], :type => :list) if tsv.nil? or tsv.empty? 
       return [nil] * self.length if tsv.empty?
 
       new = TSV.setup({}, :key_field => "Mutated Isoform", :fields => ["Func. Impact"], :type => :list)
@@ -213,8 +211,13 @@ module MutatedIsoform
       tsv.each do |key, values|
         uniprot, change = key.split(" ")
         uniprot_change = [uniprot.upcase, change.upcase]
-        correspondance[uniprot_change].each do |mutation|
-          new[mutation] = values["Func. Impact"]
+        
+        if correspondance.include? uniprot_change
+          correspondance[uniprot_change].each do |mutation|
+            new[mutation] = values["Func. Impact"]
+          end
+        else
+          Log.medium "Correspondace value missing: #{uniprot_change.inspect}"
         end
       end
 
@@ -244,10 +247,4 @@ module MutatedIsoform
     end
   end
 end
-
-
-if __FILE__ == $0
-  ddd MutatedIsoform.setup("ENSP00000288602:Q435R", "Hsa/jun2011").pdbs_and_positions
-end
-
 

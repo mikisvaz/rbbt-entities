@@ -20,6 +20,7 @@ module Genotype
 
   module Cohort
     extend Workflow
+    extend Entity
 
     if self.respond_to? :extended
       class << self
@@ -29,26 +30,6 @@ module Genotype
 
     def self.extended(cohort)
       prev_genotype_cohort_extended(cohort) if self.respond_to? :prev_genotype_cohort_extended
-
-      class << cohort
-        attr_accessor :metagenotype
-
-        def jobname
-          if @jobname.nil?
-            @jobname ||= "Meta-genotype: " + self.collect{|g| g.jobname} * ", "
-            @jobname[100..-1] = " (etc; #{self.length} genotypes)" if @jobname.length > 100
-          end
-          @jobname
-        end
-
-        def metagenotype
-          if @metagenotype.nil?
-            @metagenotype = GenomicMutation.setup(self.dup.flatten, jobname, self[0].organism, self[0].orig_watson)
-            @metagenotype.extend Genotype unless Genotype === @metagenotype
-          end
-          @metagenotype
-        end
-      end unless cohort.respond_to? :metagenotype
 
       cohort.each do |genotype| genotype.extend Genotype unless Genotype === genotype end
 
@@ -67,6 +48,19 @@ module Genotype
       new = self.values_at *(genotypes & fields)
       new.extend Cohort
     end
+
+    def jobname
+      if @jobname.nil?
+        @jobname ||= "Meta-genotype: " + self.collect{|g| g.jobname} * ", "
+        @jobname[100..-1] = " (etc; #{self.length} genotypes)" if @jobname.length > 100
+      end
+      @jobname
+    end
+
+    def metagenotype
+      GenomicMutation.setup(self.dup.flatten, jobname, self[0].organism, self[0].orig_watson).extend Genotype
+    end
+
 
     returns "Ensembl Gene ID"
     task :all_affected_genes => :array do

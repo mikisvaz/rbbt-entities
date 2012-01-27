@@ -42,9 +42,11 @@ module Protein
   end
 
   property :transcript => :array2single do
-    ensembl.collect{|ensp|
+    res = ensembl.collect{|ensp|
       Protein.ensp2enst(organism, ensp)
     }
+    Transcript.setup(res, "Ensembl Transcript ID", self.organism) if defined? Transcript
+    res
   end
   persist :transcript
 

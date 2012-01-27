@@ -22,7 +22,7 @@ module Entity
 
         def self.extended(data)
           prev_entity_extended(data)
-          data.extend AnnotatedArray if Array === data
+          data.extend AnnotatedArray if Array === data and not AnnotatedArray === data and not (Annotated === data.first and (data.annotation_types - data.first.annotation_types).any?)
           data
         end
       end
@@ -35,8 +35,9 @@ module Entity
       end
 
       def clean_annotations
+        return self unless Annotated === self
         case
-        when Array === self
+        when (Array === self)
           self.annotated_array_clean_collect{|e| e.respond_to?(:clean_annotations)? e.clean_annotations : e}
         when String === self
           "" << self
