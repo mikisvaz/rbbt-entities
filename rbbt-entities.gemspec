@@ -4,14 +4,14 @@
 # -*- encoding: utf-8 -*-
 
 Gem::Specification.new do |s|
-  s.name = %q{rbbt-entities}
-  s.version = "1.1.0"
+  s.name = "rbbt-entities"
+  s.version = "1.1.1"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Miguel Vazquez"]
-  s.date = %q{2012-01-13}
-  s.description = %q{Entities for handling tsv files, caches, etc}
-  s.email = %q{miguel.vazquez@cnio.es}
+  s.date = "2012-01-31"
+  s.description = "Entities for handling tsv files, caches, etc"
+  s.email = "miguel.vazquez@cnio.es"
   s.extra_rdoc_files = [
     "LICENSE"
   ]
@@ -28,10 +28,10 @@ Gem::Specification.new do |s|
     "lib/rbbt/entity/protein.rb",
     "lib/rbbt/entity/transcript.rb"
   ]
-  s.homepage = %q{http://github.com/mikisvaz/rbbt-util}
+  s.homepage = "http://github.com/mikisvaz/rbbt-util"
   s.require_paths = ["lib"]
-  s.rubygems_version = %q{1.6.2}
-  s.summary = %q{Entities for the Ruby Bioinformatics Toolkit (rbbt)}
+  s.rubygems_version = "1.8.12"
+  s.summary = "Entities for the Ruby Bioinformatics Toolkit (rbbt)"
   s.test_files = ["test/test_helper.rb", "test/rbbt/entity/test_gene.rb", "test/rbbt/entity/test_genomic_mutation.rb", "test/rbbt/entity/test_mutated_isoform.rb", "test/rbbt/entity/test_protein.rb", "test/rbbt/test_entity.rb"]
 
   if s.respond_to? :specification_version then
