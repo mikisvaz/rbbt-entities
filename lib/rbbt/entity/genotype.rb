@@ -142,7 +142,8 @@ module Genotype
 
     proteins = truncated_isoforms.protein
     genes = proteins.gene
-    genes.to("Ensembl Gene ID").uniq.clean_annotations
+    genes = genes.to("Ensembl Gene ID").uniq
+    genes.respond_to?(:clean_annotations)? genes.clean_annotations : genes
   end
 
   returns "Ensembl Gene ID"

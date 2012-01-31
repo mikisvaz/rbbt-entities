@@ -22,7 +22,14 @@ module Entity
 
         def self.extended(data)
           prev_entity_extended(data)
-          data.extend AnnotatedArray if Array === data and not AnnotatedArray === data and not (Annotated === data.first and (data.annotation_types - data.first.annotation_types).any?)
+
+          if Array === data and 
+            not AnnotatedArray === data and 
+            not (Annotated === data.compact.first and (data.annotation_types - data.compact.first.annotation_types).any?)
+
+            data.extend AnnotatedArray
+          end
+
           data
         end
       end
@@ -35,12 +42,17 @@ module Entity
       end
 
       def clean_annotations
-        return self unless Annotated === self
         case
-        when (Array === self)
-          self.annotated_array_clean_collect{|e| e.respond_to?(:clean_annotations)? e.clean_annotations : e}
+        when self.nil?
+          self
         when String === self
           "" << self
+        when self.respond_to?(:annotated_array_clean_collect)
+          self.annotated_array_clean_collect{|e| e.respond_to?(:clean_annotations)? e.clean_annotations : e}
+        when Array === self
+          self.collect{|e| e.respond_to?(:clean_annotations)? e.clean_annotations : e}
+        else
+          raise "Unknown casuistic in clean_annotations for object: #{self.inspect}"
         end
       end
 

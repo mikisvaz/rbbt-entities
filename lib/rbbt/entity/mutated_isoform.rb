@@ -99,7 +99,9 @@ module MutatedIsoform
 
   property :truncated => :array2single do
     begin
-      protein2sequence_length = Misc.process_to_hash(self.protein.flatten){|list| list.sequence_length}
+      proteins = self.protein.compact.flatten
+      protein2sequence_length = Misc.process_to_hash(proteins){|list| proteins.sequence_length}
+
       self.collect do |isoform_mutation|
 
                        next if isoform_mutation.consequence != "FRAMESHIFT" and isoform_mutation.consequence != "NONSENSE"
