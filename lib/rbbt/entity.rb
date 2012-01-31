@@ -137,7 +137,12 @@ module Entity
       alias_method orig_name, method_name unless instance_methods.include? orig_name
 
       define_method method_name do |*args|
-        Persist.persist(__method__.to_s, type, options.merge(:other => {:args => args, :id => self.id})) do
+        persist_name = __method__.to_s << ":" << self.id
+
+        persist_options = options
+        persist_options = persist_options.merge(:other => {:args => args}) if args.any?
+
+        Persist.persist(persist_name, type, persist_options) do
           self.send(orig_name, *args)
         end
       end
