@@ -160,7 +160,7 @@ module GenomicMutation
   property :over_gene? => :array2single do |gene|
     gene = Gene.setup(gene.dup, "Ensembl Gene ID", organism) unless Gene === gene
 
-    gene_range = gene.range
+    gene_range = gene.chr_range
     gene_chromosome = gene.chromosome
 
     if gene_range.nil?

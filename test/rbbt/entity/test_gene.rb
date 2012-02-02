@@ -45,10 +45,9 @@ class TestGene < Test::Unit::TestCase
   end
 
   def test_range
-    assert Range === CDK5.range
-    assert Range === CDK5.make_list.range.first
+    assert Range === CDK5.chr_range
+    assert Range === CDK5.make_list.chr_range.first
   end
-
 end
 
 

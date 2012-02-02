@@ -24,7 +24,6 @@ module Gene
     end
   end
 
-
   def self.filter(query, field = nil, options = nil, entity = nil)
     return true if query == entity
 
@@ -49,12 +48,9 @@ module Gene
 
   property :to => :array2single do |new_format|
     return self if format == new_format
-    Gene.setup(Translation.job(:tsv_translate, "", :organism => organism, :genes => self, :format => new_format).exec.values_at(*self), new_format, organism)
-  end
-
-  property :__to => :array2single do |new_format|
-    return self if format == new_format
-    to!(new_format).collect!{|v| Array === v ? v.first : v}
+    genes = Translation.job(:tsv_translate, "", :organism => organism, :genes => self, :format => new_format).exec.values_at(*self)
+    Gene.setup(genes, new_format, organism)
+    genes
   end
 
   property :strand => :array2single do 
@@ -66,6 +62,11 @@ module Gene
     to "Ensembl Gene ID"
   end
 
+  property :biotype => :array2single do
+    Organism.gene_biotype(organism).tsv(:persist => true, :type => :single).values_at *self.ensembl
+  end
+  persist :biotype
+
   property :entrez => :array2single do
     to "Entrez Gene ID"
   end
@@ -73,12 +74,11 @@ module Gene
   property :uniprot => :array2single do
     to "UniProt/SwissProt Accession"
   end
-  persist :uniprot
 
   property :name => :array2single do
+    return self if self.format == "Associated Gene Name"
     to "Associated Gene Name"
   end
-  persist :name
 
   property :chr_start => :array2single do
     Organism.gene_positions(organism).tsv(:persist => true, :type => :single, :cast => :to_i, :fields => ["Gene Start"]).values_at *self
@@ -152,14 +152,14 @@ module Gene
   end
   persist :chromosome
 
-  property :range => :array2single do
+  property :chr_range => :array2single do
     pos = Organism.gene_positions(organism).tsv :fields => ["Gene Start", "Gene End"], :type => :list, :persist => true, :cast => :to_i
     to("Ensembl Gene ID").collect do |gene|
       next if not pos.include? gene
       Range.new *pos[gene]
     end
   end
-  persist :range
+  persist :chr_range
 
   property :articles => :array2single do
     PMID.setup(Organism.gene_pmids(organism).tsv(:persist => true, :fields => ["PMID"], :type => :flat, :unnamed => true).values_at *self.entrez)
@@ -234,7 +234,7 @@ module Gene
     raise "No organism defined" if self.organism.nil?
     clean_organism = self.organism.sub(/\/.*/,'') + '/jun2011'
     names.organism = clean_organism
-    ranges = names.chromosome.zip(name.range).collect do |chromosome, range|
+    ranges = names.chromosome.zip(name.chr_range).collect do |chromosome, range|
       next if range.nil?
       [chromosome, range.begin, range.end] * ":"
     end
