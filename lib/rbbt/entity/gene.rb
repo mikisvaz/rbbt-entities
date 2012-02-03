@@ -245,59 +245,68 @@ module Gene
 
   property :ihop_interactions => :single do
     uniprot = self.uniprot
-    url = "http://ws.bioinfo.cnio.es/iHOP/cgi-bin/getSymbolInteractions?ncbiTaxId=9606&reference=#{uniprot}&namespace=UNIPROT__AC" 
-    doc = Nokogiri::XML(Open.read(url))
-    sentences = doc.css("iHOPsentence")
-    sentences
+    if uniprot.nil?
+      nil
+    else
+      url = "http://ws.bioinfo.cnio.es/iHOP/cgi-bin/getSymbolInteractions?ncbiTaxId=9606&reference=#{uniprot}&namespace=UNIPROT__AC" 
+      doc = Nokogiri::XML(Open.read(url))
+      sentences = doc.css("iHOPsentence")
+      sentences
+    end
   end
 
   property :tagged_ihop_interactions => :single do
     interactors = []
-    ihop_interactions.each do |sentence|
-      sentence.css('iHOPatom').collect{|atom|
-        atom.css('evidence');
-      }.compact.flatten.each do |evidence|
-        symbol =  evidence.attr('symbol')
-        taxid  =  evidence.attr('ncbiTaxId')
-
-        if Organism.entrez_taxids(self.organism).list.include? taxid
-          interactors << symbol
-        end
-      end
-    end
-
-    Gene.setup(interactors, "Associated Gene Name", self.organism).organism
-    
-    interactors_ensembl = interactors.ensembl
-
-    interactors2ensembl = {}
-    interactors.collect{|i| i}.zip(interactors_ensembl.collect{|i| i}).each do |o,e|
-      interactors2ensembl[o] = e
-    end
-
-    ihop_interactions.collect do |sentence|
-      sentence.css('iHOPatom').each{|atom|
-        evidences = atom.css('evidence')
-        symbol = evidences.collect do |evidence|
+    ihop_interactions = self.ihop_interactions
+    if ihop_interactions.nil?
+      nil
+    else
+      ihop_interactions.each do |sentence|
+        sentence.css('iHOPatom').collect{|atom|
+          atom.css('evidence');
+        }.compact.flatten.each do |evidence|
           symbol =  evidence.attr('symbol')
           taxid  =  evidence.attr('ncbiTaxId')
 
           if Organism.entrez_taxids(self.organism).list.include? taxid
-            symbol
-          else
-            nil
+            interactors << symbol
           end
-        end.compact.first
-
-        evidences.remove
-
-        if interactors2ensembl.include? symbol and not interactors2ensembl[symbol].nil?
-          atom.children.remove
-          interactor = interactors2ensembl[symbol]
-          atom.replace interactor.respond_to?(:link)? interactor.link : interactor.name
         end
-      }
-      sentence.to_s
+      end
+
+      Gene.setup(interactors, "Associated Gene Name", self.organism).organism
+      
+      interactors_ensembl = interactors.ensembl
+
+      interactors2ensembl = {}
+      interactors.collect{|i| i}.zip(interactors_ensembl.collect{|i| i}).each do |o,e|
+        interactors2ensembl[o] = e
+      end
+
+      ihop_interactions.collect do |sentence|
+        sentence.css('iHOPatom').each{|atom|
+          evidences = atom.css('evidence')
+          symbol = evidences.collect do |evidence|
+            symbol =  evidence.attr('symbol')
+            taxid  =  evidence.attr('ncbiTaxId')
+
+            if Organism.entrez_taxids(self.organism).list.include? taxid
+              symbol
+            else
+              nil
+            end
+          end.compact.first
+
+          evidences.remove
+
+          if interactors2ensembl.include? symbol and not interactors2ensembl[symbol].nil?
+            atom.children.remove
+            interactor = interactors2ensembl[symbol]
+            atom.replace interactor.respond_to?(:link)? interactor.link : interactor.name
+          end
+        }
+        sentence.to_s
+      end
     end
   end
 end
