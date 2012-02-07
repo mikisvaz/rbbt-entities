@@ -45,27 +45,27 @@ module GenomicMutation
   property :chromosome => :array2single do
     self.clean_annotations.collect{|mut| mut.split(":")[0]}
   end
-  persist :chromosome
+  persist :_ary_chromosome
 
   property :position => :array2single do
     self.clean_annotations.collect{|mut| mut.split(":")[1].to_i}
   end
-  persist :position
+  persist :_ary_position
 
   property :base => :array2single do
     self.clean_annotations.collect{|mut| mut.split(":")[2]}
   end
-  persist :base
+  persist :_ary_base
 
   property :reference => :array2single do
     Sequence.reference_allele_at_chr_positions(organism, chromosome, position)
   end
-  persist :reference
+  persist :_ary_reference
 
   property :score => :array2single do
     self.clean_annotations.collect{|mut| mut.split(":")[3].to_f}
   end
-  persist :score
+  persist :_ary_score
 
   property :remove_score => :array2single do
     self.annotate(self.collect{|mut| mut.split(":")[0..2] * ":"})
@@ -169,7 +169,7 @@ module GenomicMutation
       chromosome.zip(position).collect{|chr,pos| chr == gene_chromosome and gene_range.include? pos}
     end
   end
-  persist :over_gene?
+  persist :_ary_over_gene?
 
   property :affected_exons  => :array2single do
     Sequence.job(:exons_at_genomic_positions, jobname, :organism => organism, :positions => self.clean_annotations).run.values_at *self

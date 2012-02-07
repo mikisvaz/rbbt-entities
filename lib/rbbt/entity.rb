@@ -18,7 +18,7 @@ module Entity
     base.module_eval do
       if not methods.include? "prev_entity_extended"
         class << self
-          attr_accessor :template, :list_template, :action_template, :list_action_template
+          attr_accessor :template, :list_template, :action_template, :list_action_template, :keep_id
           alias prev_entity_extended extended 
         end 
 
@@ -53,6 +53,10 @@ module Entity
           self.annotated_array_clean_collect{|e| e.respond_to?(:clean_annotations)? e.clean_annotations : e}
         when Array === self
           self.collect{|e| e.respond_to?(:clean_annotations)? e.clean_annotations : e}
+        when (Fixnum === self)
+          0 + self
+        when (Float === self)
+          0.0 + self
         else
           raise "Unknown casuistic in clean_annotations for object: #{self.inspect}"
         end
@@ -87,6 +91,9 @@ module Entity
         end
 
         name = name.to_s unless String === name
+
+        persisted_name = UNPERSISTED_PREFIX + name.to_s
+        self.remove_method persisted_name if methods.include? persisted_name
 
         case type
         when :single, :single2array
