@@ -52,6 +52,7 @@ module Gene
     Gene.setup(genes, new_format, organism)
     genes
   end
+  persist :to
 
   property :strand => :array2single do 
     Organism.gene_positions(organism).tsv(:fields => ["Strand"], :type => :single, :persist => true).values_at *self
