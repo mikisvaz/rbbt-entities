@@ -157,6 +157,11 @@ module GenomicMutation
   end
   persist :in_exon_junction?
 
+  property :over_range? => :array2single do |range|
+    chromosome.zip(position).collect{|chr,pos| chr == gene_chromosome and range.include? pos}
+  end
+  persist :_ary_over_range?
+
   property :over_gene? => :array2single do |gene|
     gene = Gene.setup(gene.dup, "Ensembl Gene ID", organism) unless Gene === gene
 
