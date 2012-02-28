@@ -44,6 +44,11 @@ module Transcript
     to!(new_format).collect!{|v| v.nil? ? nil : v.first}
   end
 
+  property :exons => :array2single do 
+    Organism.transcript_exons(organism).tsv(:persist => true, :fields => "Ensembl Exon ID").values_at *self
+  end
+  persist :exons
+
   property :ensembl => :array2single do
     to "Ensembl Transcript ID"
   end
