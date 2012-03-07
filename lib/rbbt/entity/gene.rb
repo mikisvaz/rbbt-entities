@@ -7,6 +7,7 @@ require 'rbbt/sources/cancer'
 require 'rbbt/entity/protein'
 require 'rbbt/entity/pmid'
 require 'rbbt/entity/transcript'
+require 'rbbt/bow/bow'
 
 Workflow.require_workflow "Translation"
 
@@ -32,6 +33,44 @@ module Gene
     false
   end
 
+  def self.gene_list_bases(genes)
+    genes = genes.ensembl
+    chromosome_genes = {}
+    Misc.process_to_hash(genes){|genes| genes.chromosome}.each{|gene, chr| chromosome_genes[chr] ||= []; chromosome_genes[chr] << gene}
+    total = 0
+    chromosome_genes.each do |chr,gs|
+      next if chr.nil?
+      total += Misc.total_length(genes.annotate(gs).chr_range.compact)
+    end
+    
+    total
+  end
+
+  def self.gene_list_exon_bases(genes)
+    genes = genes.ensembl
+    chromosome_genes = {}
+    Misc.process_to_hash(genes){|genes| genes.chromosome}.each{|gene, chr| chromosome_genes[chr] ||= []; chromosome_genes[chr] << gene}
+
+    exon_ranges = Organism.exons(genes.organism).tsv :persist => true, :fields => ["Exon Chr Start", "Exon Chr End"], :type => :list, :cast => :to_i
+    total = 0
+
+    chromosome_genes.each do |chr,gs|
+      next if chr.nil?
+      exons = genes.annotate(gs).transcripts.compact.flatten.exons.compact.flatten.uniq
+
+      exon_ranges = exons.collect{|exon|
+        next unless exon_ranges.include? exon
+        pos = exon_ranges[exon]
+        (pos.first..pos.last)
+      }.compact
+      total += Misc.total_length(exon_ranges)
+    end
+    
+    total
+  end
+
+
+
   self.annotation :format
   self.annotation :organism
 
@@ -52,7 +91,7 @@ module Gene
     Gene.setup(genes, new_format, organism)
     genes
   end
-  persist :to
+#  persist :to
 
   property :strand => :array2single do 
     Organism.gene_positions(organism).tsv(:fields => ["Strand"], :type => :single, :persist => true).values_at *self
@@ -244,6 +283,18 @@ module Gene
   persist :somatic_snvs
 
 
+  property :literature_score do |terms|
+    terms = terms.collect{|t| t.stem}
+    articles = self.articles
+    if articles.nil? or articles.empty?
+      0
+    else
+      articles.inject(0){|acc,article| acc += article.text.words.select{|word| terms.include? word}.length }.to_f / articles.length
+    end
+  end
+  persist :literature_score
+
+
   property :ihop_interactions => :single do
     uniprot = self.uniprot
     if uniprot.nil?
@@ -311,4 +362,3 @@ module Gene
     end
   end
 end
-

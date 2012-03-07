@@ -48,6 +48,21 @@ class TestGene < Test::Unit::TestCase
     assert Range === CDK5.chr_range
     assert Range === CDK5.make_list.chr_range.first
   end
+
+  def test_total_bases
+    require 'rbbt/entity/gene'
+    require 'rbbt/sources/kegg'
+
+    assert Gene.gene_list_bases(Gene.setup(KeggPathway.setup("hsa03040", "Hsa/jun2011").genes, "KEGG Gene ID", "Hsa/jun2011").ensembl) > 100000
+  end
+
+  def test_total_exon_bases
+    require 'rbbt/entity/gene'
+    require 'rbbt/sources/kegg'
+
+    assert Gene.gene_list_exon_bases(Gene.setup(KeggPathway.setup("hsa03040", "Hsa/jun2011").genes, "KEGG Gene ID", "Hsa/jun2011").ensembl) < 100000
+  end
+
 end
 
 

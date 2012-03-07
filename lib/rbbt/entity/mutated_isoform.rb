@@ -57,7 +57,6 @@ module MutatedIsoform
     seq_len = protein.sequence_length
     position = self.position
 
-
     doc = Nokogiri::XML(svg)
     return nil unless doc.css('svg')
     width = doc.css('svg').first.attr('width').to_f
