@@ -31,6 +31,18 @@ module Transcript
     Protein.setup(res, "Ensembl Protein ID", organism)
   end
 
+  def self.enst2ense(organism, transcript)
+    @@enst2ense ||= {}
+    @@enst2ense[organism] ||= Organism.transcript_exons(organism).tsv(:persist => true, :fields => "Ensembl Exon ID", :unnamed => true)
+    res = if Array === transcript
+            @@enst2ense[organism].values_at *transcript
+          else
+            @@enst2ense[organism][transcript]
+          end
+    res
+  end
+
+
 
   property :to! => :array2single do |new_format|
     return self if format == new_format
@@ -45,7 +57,7 @@ module Transcript
   end
 
   property :exons => :array2single do 
-    Organism.transcript_exons(organism).tsv(:persist => true, :fields => "Ensembl Exon ID").values_at *self
+    Transcript.enst2ense(organism, self)
   end
   persist :exons
 

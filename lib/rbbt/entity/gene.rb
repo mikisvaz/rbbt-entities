@@ -51,7 +51,7 @@ module Gene
     chromosome_genes = {}
     Misc.process_to_hash(genes){|genes| genes.chromosome}.each{|gene, chr| chromosome_genes[chr] ||= []; chromosome_genes[chr] << gene}
 
-    exon_ranges = Organism.exons(genes.organism).tsv :persist => true, :fields => ["Exon Chr Start", "Exon Chr End"], :type => :list, :cast => :to_i
+    @@exon_range_tsv ||= Organism.exons(genes.organism).tsv :persist => true, :fields => ["Exon Chr Start", "Exon Chr End"], :type => :list, :cast => :to_i
     total = 0
 
     chromosome_genes.each do |chr,gs|
@@ -59,8 +59,8 @@ module Gene
       exons = genes.annotate(gs).transcripts.compact.flatten.exons.compact.flatten.uniq
 
       exon_ranges = exons.collect{|exon|
-        next unless exon_ranges.include? exon
-        pos = exon_ranges[exon]
+        next unless @@exon_range_tsv.include? exon
+        pos = @@exon_range_tsv[exon]
         (pos.first..pos.last)
       }.compact
       total += Misc.total_length(exon_ranges)
@@ -180,23 +180,22 @@ module Gene
   persist :max_protein_length
 
   property :chromosome => :array2single do
-    chr = Organism.gene_positions(organism).tsv :fields => ["Chromosome Name"], :type => :single, :persist => true
-    chr.unnamed = true
+    chromosome_tsv = Organism.gene_positions(organism).tsv :fields => ["Chromosome Name"], :type => :single, :persist => true, :unnamed => true
     if Array === self
       to("Ensembl Gene ID").collect do |gene|
-        chr[gene]
+        chromosome_tsv[gene]
       end
     else
-      chr[to("Ensembl Gene ID")]
+      chromosome_tsv[to("Ensembl Gene ID")]
     end
   end
   persist :chromosome
 
   property :chr_range => :array2single do
-    pos = Organism.gene_positions(organism).tsv :fields => ["Gene Start", "Gene End"], :type => :list, :persist => true, :cast => :to_i
+    chr_range_index ||= Organism.gene_positions(organism).tsv :fields => ["Gene Start", "Gene End"], :type => :list, :persist => true, :cast => :to_i
     to("Ensembl Gene ID").collect do |gene|
-      next if not pos.include? gene
-      Range.new *pos[gene]
+      next if not chr_range_index.include? gene
+      Range.new *chr_range_index[gene]
     end
   end
   persist :chr_range
@@ -207,9 +206,8 @@ module Gene
   persist :articles
 
   property :sequence => :array2single do
-    Organism.gene_sequence(organism).tsv :persist => true
-    @gene_sequence.unnamed = true
-    @gene_sequence.values_at *self.ensembl
+    @@sequence_tsv = Organism.gene_sequence(organism).tsv :persist => true, :unnamed => true
+    @@sequence_tsv.values_at *self.ensembl
   end
   persist :sequence
 

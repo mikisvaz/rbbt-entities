@@ -99,7 +99,7 @@ module MutatedIsoform
   property :truncated => :array2single do
     begin
       proteins = self.protein.compact.flatten
-      protein2sequence_length = Misc.process_to_hash(proteins){|list| proteins.sequence_length}
+      protein2sequence_length = Misc.process_to_hash(proteins){|list| proteins.any? ? proteins.sequence_length : []}
 
       self.collect do |isoform_mutation|
 
