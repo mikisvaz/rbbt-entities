@@ -23,6 +23,19 @@ class TestGenomicMutation < Test::Unit::TestCase
     assert MUTATION.over_gene? Gene.setup("PSTK", "Associated Gene Name", "Hsa/jun2011").ensembl
     assert(!(SPLICING.over_gene? Gene.setup("PSTK", "Associated Gene Name", "Hsa/jun2011").ensembl))
   end
+
+  def test_type
+    reference = "A"
+    mutation = GenomicMutation.setup("1:1727802:A", "Test", "Hsa/may2009", true)
+    assert_equal 'none', mutation.type
+    mutation = GenomicMutation.setup("1:1727802:C", "Test", "Hsa/may2009", true)
+    assert_equal 'transversion', mutation.type
+    mutation = GenomicMutation.setup("1:1727802:T", "Test", "Hsa/may2009", true)
+    assert_equal 'transversion', mutation.type
+    mutation = GenomicMutation.setup("1:1727802:G", "Test", "Hsa/may2009", true)
+    assert_equal 'transition', mutation.type
+  end
+
 end
 
 

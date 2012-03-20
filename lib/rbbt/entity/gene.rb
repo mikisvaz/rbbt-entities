@@ -51,7 +51,9 @@ module Gene
     chromosome_genes = {}
     Misc.process_to_hash(genes){|genes| genes.chromosome}.each{|gene, chr| chromosome_genes[chr] ||= []; chromosome_genes[chr] << gene}
 
-    @@exon_range_tsv ||= Organism.exons(genes.organism).tsv :persist => true, :fields => ["Exon Chr Start", "Exon Chr End"], :type => :list, :cast => :to_i
+    @@exon_range_tsv ||= {}
+    organism = genes.organism
+    @@exon_range_tsv[organism] ||= Organism.exons(organism).tsv :persist => true, :fields => ["Exon Chr Start", "Exon Chr End"], :type => :list, :cast => :to_i
     total = 0
 
     chromosome_genes.each do |chr,gs|
@@ -59,8 +61,9 @@ module Gene
       exons = genes.annotate(gs).transcripts.compact.flatten.exons.compact.flatten.uniq
 
       exon_ranges = exons.collect{|exon|
-        next unless @@exon_range_tsv.include? exon
-        pos = @@exon_range_tsv[exon]
+        Log.low "Exon #{ exon } does not have range" unless @@exon_range_tsv[organism].include? exon
+        next unless @@exon_range_tsv[organism].include? exon
+        pos = @@exon_range_tsv[organism][exon]
         (pos.first..pos.last)
       }.compact
       total += Misc.total_length(exon_ranges)
@@ -91,12 +94,11 @@ module Gene
     Gene.setup(genes, new_format, organism)
     genes
   end
-#  persist :to
 
   property :strand => :array2single do 
     Organism.gene_positions(organism).tsv(:fields => ["Strand"], :type => :single, :persist => true).values_at *self
   end
-  persist :strand
+  persist :_ary_strand
 
   property :ensembl => :array2single do
     to "Ensembl Gene ID"

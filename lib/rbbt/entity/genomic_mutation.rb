@@ -17,16 +17,16 @@ module GenomicMutation
   self.format = "Genomic Mutation"
 
   property :guess_watson => :array do
-     if Array === self
-        @watson = Sequence.job(:is_watson, jobname, :mutations => self.clean_annotations, :organism => organism).run
-      else
-        @watson = Sequence.job(:is_watson, jobname, :mutations => [self.clean_annotations], :organism => organism).run
-      end
+    if Array === self
+      @watson = Sequence.job(:is_watson, jobname, :mutations => self.clean_annotations, :organism => organism).run
+    else
+      @watson = Sequence.job(:is_watson, jobname, :mutations => [self.clean_annotations], :organism => organism).run
+    end
   end
   persist :guess_watson
 
   def watson
-    if @watson.nil?
+    if @watson.nil? and Array === self
       @watson = :missing
       @watson = guess_watson
     end
@@ -62,6 +62,17 @@ module GenomicMutation
   end
   persist :_ary_reference
 
+  property :gene_strand_reference => :array2single do
+    genes = self.genes
+    gene_strand = Misc.process_to_hash(genes.compact.flatten){|list| list.strand }
+    reverse = genes.collect{|list| not list.nil? and list.select{|gene| gene_strand[gene].to_s == "-1" }.any? }
+    reference.zip(reverse).collect{|reference,reverse|
+      reverse ? Misc::BASE2COMPLEMENT[reference] : reference
+    }
+  end
+  persist :_ary_gene_strand_reference
+
+
   property :score => :array2single do
     self.clean_annotations.collect{|mut| mut.split(":")[3].to_f}
   end
@@ -94,7 +105,10 @@ module GenomicMutation
   persist :reference
 
   property :type => :array2single do
-    self.base.zip(reference).collect do |base,reference|
+    reference = watson ? self.reference : self.gene_strand_reference
+
+   self.base.zip(reference).collect do |base,reference|
+
       type = case
              when base == reference
                "none"
@@ -103,20 +117,21 @@ module GenomicMutation
              when (base.length > 1 or base == '-')
                "indel"
              when (not %w(A G T C).include? base and not %w(A G T C).include? reference) 
-               nil
-             when (((Misc::IUPAC2BASE[base] || []) & ["A", "G"]).any? and     ((Misc::IUPAC2BASE[reference] || []) & ["A", "G"]).any?)
-               "transition"
-             when (((Misc::IUPAC2BASE[base] || []) & ["T", "C"]).any? and     ((Misc::IUPAC2BASE[reference] || []) & ["T", "C"]).any?)
-               "transition"
-             when (((Misc::IUPAC2BASE[base] || []) & ["A", "G"]).any? and not ((Misc::IUPAC2BASE[reference] || []) & ["A", "G"]).any?)
+               "unknown"
+             when (((Misc::IUPAC2BASE[base] || []) & ["A", "G"]).any? and     ((Misc::IUPAC2BASE[reference] || []) & ["T", "C"]).any?)
                "transversion"
-             when (((Misc::IUPAC2BASE[base] || []) & ["T", "C"]).any? and not ((Misc::IUPAC2BASE[reference] || []) & ["T", "C"]).any?)
+             when (((Misc::IUPAC2BASE[base] || []) & ["T", "C"]).any? and     ((Misc::IUPAC2BASE[reference] || []) & ["A", "G"]).any?)
                "transversion"
+             when (((Misc::IUPAC2BASE[base] || []) & ["A", "G"]).any? and     ((Misc::IUPAC2BASE[reference] || [nil]) & ["T", "C", nil]).empty?)
+               "transition"
+             when (((Misc::IUPAC2BASE[base] || []) & ["T", "C"]).any? and     ((Misc::IUPAC2BASE[reference] || [nil]) & ["A", "G", nil]).empty?)
+               "transition"
              else
-               "unknown [#{[base, reference] * " - "}]"
+               "unknown"
              end
       type
     end
+
   end
   persist :type
 
