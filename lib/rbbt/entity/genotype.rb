@@ -58,7 +58,9 @@ module Genotype
     end
 
     def metagenotype
-      GenomicMutation.setup(self.dup.flatten, jobname, self[0].organism, self[0].orig_watson).extend Genotype
+      organism = self.collect{|g| g.organism}.compact.first
+      orig_watson = self.collect{|g| g.orig_watson}.compact.first
+      GenomicMutation.setup(self.dup.flatten, jobname, organism, orig_watson).extend Genotype
     end
 
 
