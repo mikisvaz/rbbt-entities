@@ -60,7 +60,7 @@ class TestGene < Test::Unit::TestCase
     require 'rbbt/entity/gene'
     require 'rbbt/sources/kegg'
 
-    assert Gene.gene_list_exon_bases(Gene.setup(KeggPathway.setup("hsa03040", "Hsa/jun2011").genes, "KEGG Gene ID", "Hsa/jun2011").ensembl) < 100000
+    assert Gene.gene_list_exon_bases(Gene.setup(KeggPathway.setup("hsa03040", "Hsa/jun2011").genes, "KEGG Gene ID", "Hsa/jun2011").ensembl) < 1000000
   end
 
 end
