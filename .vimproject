@@ -15,6 +15,7 @@ rbbt-entities=/$PWD filter="*.rb *.rake Rakefile *.rdoc *.R *.sh *.js *.haml *.s
     pmid.rb
     protein.rb
     transcript.rb
+    interactor.rb
    }
   }
  }

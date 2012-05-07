@@ -300,9 +300,15 @@ module Gene
     if uniprot.nil?
       nil
     else
-      url = "http://ws.bioinfo.cnio.es/iHOP/cgi-bin/getSymbolInteractions?ncbiTaxId=9606&reference=#{uniprot}&namespace=UNIPROT__AC" 
-      doc = Nokogiri::XML(Open.read(url))
-      sentences = doc.css("iHOPsentence")
+      sentences = []
+
+      begin
+        url = "http://ws.bioinfo.cnio.es/iHOP/cgi-bin/getSymbolInteractions?ncbiTaxId=9606&reference=#{uniprot}&namespace=UNIPROT__AC" 
+        doc = Nokogiri::XML(Open.read(url))
+        sentences = doc.css("iHOPsentence")
+      rescue
+      end
+
       sentences
     end
   end
@@ -337,6 +343,7 @@ module Gene
 
       ihop_interactions.collect do |sentence|
         sentence.css('iHOPatom').each{|atom|
+          literal = atom.content()
           evidences = atom.css('evidence')
           symbol = evidences.collect do |evidence|
             symbol =  evidence.attr('symbol')
@@ -354,7 +361,7 @@ module Gene
           if interactors2ensembl.include? symbol and not interactors2ensembl[symbol].nil?
             atom.children.remove
             interactor = interactors2ensembl[symbol]
-            atom.replace interactor.respond_to?(:link)? interactor.link : interactor.name
+            atom.replace interactor.respond_to?(:link)? interactor.link(nil, nil, :html_link_extra_attrs => "title='#{literal}'") : interactor.name
           end
         }
         sentence.to_s

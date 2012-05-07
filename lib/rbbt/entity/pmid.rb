@@ -32,8 +32,19 @@ module PMID
   end
   persist :year
 
-  property :_get_text => :array2single do
-    article.collect{|a| a.nil? ? nil : a.text}
+  property :_get_text => :array2single do |*args|
+    type = args.first
+
+    case type.to_s
+    when "full_text"
+      article.collect{|a| a.nil? ? nil : a.full_text}
+    when "abstract"
+      article.collect{|a| a.nil? ? nil : a.abstract }
+    when "best"
+      article.collect{|a| a.nil? ? nil : (a.full_text || a.text) }
+    else
+      article.collect{|a| a.nil? ? nil : a.text}
+    end
   end
 
   property :pubmed_url => :single2array do
