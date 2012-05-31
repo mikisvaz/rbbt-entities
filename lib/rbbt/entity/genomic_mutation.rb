@@ -30,6 +30,7 @@ module GenomicMutation
       @watson = :missing
       @watson = guess_watson
     end
+    @watson = false if @watson == "false"
     @watson
   end
 
@@ -72,6 +73,31 @@ module GenomicMutation
   end
   persist :_ary_gene_strand_reference
 
+  # DID NOT TRY THIS. Its supposed to deal with ambiguous gene overlaps by
+  # taking the first coding gene, if any
+  #property :gene_strand_reference => :array2single do
+  #  genes = self.genes
+  #  gene_strand = Misc.process_to_hash(genes.compact.flatten){|list| list.strand }
+  #  gene_biotype = Misc.process_to_hash(genes.compact.flatten){|list| list.biotype }
+  #  reference.zip(genes).collect{|reference,genes|
+  #    case
+  #    when (genes.nil? or genes.empty?)
+  #      reference
+  #    when genes.length == 1
+  #      gene_strand[genes[0]] == "-1" ? Misc::BASE2COMPLEMENT[reference] : reference
+  #    else
+  #      coding_genes = genes.zip(gene_strand.values_at(*genes)).select{|gene,strand| gene_biotype[gene] == "protein_coding"}
+
+  #      if coding_genes.empty?
+  #        reference
+  #      else
+  #        coding_genes[0][1] == "-1" ? Misc::BASE2COMPLEMENT[reference] : reference
+  #      end
+  #    end
+  #  }
+  #end
+  #persist :_ary_gene_strand_reference
+
 
   property :score => :array2single do
     self.clean_annotations.collect{|mut| mut.split(":")[3].to_f}
@@ -107,7 +133,7 @@ module GenomicMutation
   property :type => :array2single do
     reference = watson ? self.reference : self.gene_strand_reference
 
-   self.base.zip(reference).collect do |base,reference|
+    self.base.zip(reference).collect do |base,reference|
 
       type = case
              when base == reference

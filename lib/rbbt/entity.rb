@@ -27,7 +27,7 @@ module Entity
 
           if Array === data and 
             not AnnotatedArray === data and 
-            not (Annotated === data.compact.first and (data.annotation_types - data.compact.first.annotation_types).any?)
+            not (data.compact.first != nil and Annotated === data.compact.first and (data.annotation_types - data.compact.first.annotation_types).any?)
 
             data.extend AnnotatedArray
           end
