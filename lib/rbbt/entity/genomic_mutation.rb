@@ -178,6 +178,7 @@ module GenomicMutation
     genes = genes.values_at *self
     Gene.setup(genes, "Ensembl Gene ID", organism)
   end
+  persist :genes
 
   property :mutated_isoforms => :array2single do
     res = Sequence.job(:mutated_isoforms_for_genomic_mutations, jobname, :watson => watson, :organism => organism, :mutations => self.clean_annotations).run.values_at *self

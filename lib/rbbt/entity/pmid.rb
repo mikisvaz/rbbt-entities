@@ -36,7 +36,7 @@ module PMID
     type = args.first
 
     case type.to_s
-    when "full_text"
+    when "full_text", 'fulltext'
       article.collect{|a| a.nil? ? nil : a.full_text}
     when "abstract"
       article.collect{|a| a.nil? ? nil : a.abstract }
