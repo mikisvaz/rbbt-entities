@@ -79,6 +79,8 @@ module MutatedIsoform
     prot, change = self.split(":")
 
     case
+    when change.nil?
+      nil
     when change =~ /UTR/
       "UTR"
     when (change[0] == ASTERISK and not change[0] == change[-1])

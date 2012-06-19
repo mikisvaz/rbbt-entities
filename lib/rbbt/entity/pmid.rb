@@ -8,6 +8,11 @@ module PMID
 
   self.format = "PMID"
 
+  property :docid => :single do |*args|
+    type = args.first
+    ["PMID", self, type].compact * ":"
+  end
+
   property :article => :array2single do
     PubMed.get_article(self).values_at(*self)
   end

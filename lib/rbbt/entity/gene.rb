@@ -265,7 +265,7 @@ module Gene
   persist :pathway_drugs
 
   property :related_cancers => :array2single do
-    Cancer["cancer_genes.tsv"].tsv(:persist => true, :type => :list).values_at(*self.name).collect{|v| v.nil? ? nil : v["Tumour Types (Somatic Mutations)"].split(", ") + v["Tumour Types (Germline Mutations)"].split(", ")}
+    Cancer["cancer_genes.tsv"].tsv(:persist => true, :type => :list).values_at(*self.name).collect{|v| v.nil? ? nil : (v["Tumour Types (Somatic Mutations)"].split(", ") + v["Tumour Types (Germline Mutations)"].split(", ")).uniq}
   end
   persist :related_cancers
 

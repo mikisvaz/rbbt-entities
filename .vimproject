@@ -15,6 +15,7 @@ rbbt-entities=/$PWD filter="*.rb *.rake Rakefile *.rdoc *.R *.sh *.js *.haml *.s
     mutated_isoform.rb
     pmid.rb
     protein.rb
+    chromosome_range.rb
     transcript.rb
     interactor.rb
    }
