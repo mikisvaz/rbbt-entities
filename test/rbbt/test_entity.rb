@@ -30,6 +30,10 @@ module ReversableString
     $count += 1
     self.collect{|s| s.reverse}
   end
+
+  property :random => :single do
+    rand
+  end
  
   persist :reverse_text_ary_p
   persist :reverse_text_ary_p
@@ -38,6 +42,7 @@ module ReversableString
 
   persist :reverse_text_ary_p_array, :array, :dir => TmpFile.tmp_file
 end
+
 class TestEntity < Test::Unit::TestCase
 
   def test_property_ary
@@ -97,5 +102,34 @@ class TestEntity < Test::Unit::TestCase
     assert_equal 1, $count
     assert_equal "2gnirtS", a.reverse_text_ary_p_array.last
     assert_equal 1, $count
+  end
+
+  def test_unpersist
+    a = ["String1", "String2"]
+    a.extend ReversableString
+
+    # Before persist
+    assert(! ReversableString.persisted?(:random))
+
+    r1 = a.random
+    r2 = a.random
+    assert_not_equal r1, r2
+
+    # After persist
+    ReversableString.persist :random
+    assert(ReversableString.persisted?(:random))
+
+    r1 = a.random
+    r2 = a.random
+    assert_equal r1, r2
+
+    # After unpersist
+    ReversableString.unpersist :random
+    assert(! ReversableString.persisted?(:random))
+
+    r1 = a.random
+    r2 = a.random
+    assert_not_equal r1, r2
+
   end
 end

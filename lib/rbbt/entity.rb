@@ -149,6 +149,18 @@ module Entity
         end
       end
 
+      def self.unpersist(method_name)
+        orig_name = UNPERSISTED_PREFIX + method_name.to_s
+        
+        alias_method method_name, orig_name
+        remove_method orig_name
+      end
+
+      def self.persisted?(method_name)
+        orig_name = UNPERSISTED_PREFIX + method_name.to_s
+        instance_methods.include? orig_name.to_s
+      end
+
     end 
   end
 end
