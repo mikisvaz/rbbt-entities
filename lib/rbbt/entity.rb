@@ -16,6 +16,7 @@ module Entity
 
     Entity.formats[base.to_s] = base
     base.module_eval do
+
       if not methods.include? "prev_entity_extended"
         class << self
           attr_accessor :template, :list_template, :action_template, :list_action_template, :keep_id
@@ -25,13 +26,22 @@ module Entity
         def self.extended(data)
           prev_entity_extended(data)
 
+          class << data
+            attr_accessor :_ary_property_cache
+
+            def clear_ary_property_cache
+              _ary_property_cache.clear
+            end
+          end
+
+          data._ary_property_cache = {}
+
           if Array === data and 
             not AnnotatedArray === data and 
             not (data.compact.first != nil and Annotated === data.compact.first and (data.annotation_types - data.compact.first.annotation_types).any?)
 
             data.extend AnnotatedArray
           end
-
           data
         end
       end
@@ -111,11 +121,13 @@ module Entity
           define_method ary_name, &block 
 
           define_method name do |*args|
+            ary_name = "_ary_" << __method__.to_s
             case
             when Array === self
               self.send(ary_name, *args)
             when (Array === self.container and self.container.respond_to? ary_name)
-              res = self.container.send(name, *args)
+              cache_code = Misc.hash2md5({:name => ary_name, :args => args})
+              res = (self.container._ary_property_cache[cache_code] ||=  self.container.send(name, *args))
               if Hash === res
                 res[self]
               else
@@ -138,7 +150,8 @@ module Entity
         alias_method orig_name, method_name unless instance_methods.include? orig_name
 
         define_method method_name do |*args|
-          persist_name = __method__.to_s << ":" << self.id
+          id = self.id
+          persist_name = __method__.to_s << ":" << (Array === id ? Misc.hash2md5(:id => id) : id)
 
           persist_options = options
           persist_options = persist_options.merge(:other => {:args => args}) if args.any?
@@ -150,8 +163,9 @@ module Entity
       end
 
       def self.unpersist(method_name)
+        return unless persisted? method_name
         orig_name = UNPERSISTED_PREFIX + method_name.to_s
-        
+
         alias_method method_name, orig_name
         remove_method orig_name
       end
@@ -159,6 +173,14 @@ module Entity
       def self.persisted?(method_name)
         orig_name = UNPERSISTED_PREFIX + method_name.to_s
         instance_methods.include? orig_name.to_s
+      end
+
+      def self.with_persisted(method_name)
+        persisted = persisted? method_name
+        persist method_name unless persisted
+        res = yield
+        unpersist method_name unless persisted
+        res
       end
 
     end 

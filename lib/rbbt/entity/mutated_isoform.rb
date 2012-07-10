@@ -20,7 +20,7 @@ module MutatedIsoform
     proteins = self.collect{|mutation| mutation.split(":").first if mutation[0..3] == "ENSP"}
     Protein.setup(proteins, "Ensembl Protein ID", organism)
   end
-  persist :protein
+  #persist :protein
 
   property :transcript => :array2single do
     begin
@@ -28,12 +28,12 @@ module MutatedIsoform
       Transcript.setup(protein.transcript.zip(self.collect{|mutation| mutation.split(":").first}).collect{|p| p.compact.first}, "Ensembl Transcript ID", organism)
     end
   end
-  persist :transcript
+  #persist :transcript
 
   property :change => :array2single do
     self.collect{|mi| mi.split(":").last}
   end
-  persist :change
+  #persist :change
 
   property :position => :array2single do
     change.collect{|c|
@@ -44,13 +44,13 @@ module MutatedIsoform
       end
     }
   end
-  persist :position
+  #persist :position
 
   property :ensembl_protein_image_url => :single2array do
     ensembl_url = if organism == "Hsa" then "www.ensembl.org" else "#{organism.sub(/.*\//,'')}.archive.ensembl.org" end
     "http://#{ensembl_url}/Homo_sapiens/Component/Transcript/Web/TranslationImage?db=core;p=#{protein};_rmd=d2a8;export=svg"
   end
-  persist :ensembl_protein_image_url
+  #persist :ensembl_protein_image_url
 
   property :marked_svg => :single2array do
     svg = Open.read(protein.ensembl_protein_image_url)
@@ -71,11 +71,13 @@ module MutatedIsoform
       svg
     end
   end
-  persist :marked_svg
+  #persist :marked_svg
 
   ASTERISK = "*"[0]
   CONSECUENCES = %w(UTR SYNONYMOUS NOSTOP MISS-SENSE INDEL FRAMESHIFT NONSENSE)
   property :consequence => :single2array do
+    return nil if self.nil?
+
     prot, change = self.split(":")
 
     case
@@ -97,7 +99,7 @@ module MutatedIsoform
       "MISS-SENSE"
     end
   end
-  persist :consequence
+  #persist :consequence
 
   property :truncated => :array2single do
     begin
@@ -122,7 +124,7 @@ module MutatedIsoform
                      end
                    end
   end
-  persist :truncated
+  #persist :truncated
 
   property :damage_scores => :array2single do |*args|
     begin
@@ -156,7 +158,7 @@ module MutatedIsoform
       end
     end
   end
-  persist :damage_scores
+  #persist :damage_scores
 
   property :damaged? => :array2single do |*args|
     begin
@@ -167,7 +169,7 @@ module MutatedIsoform
       damage_scores.zip(truncated).collect{|damage, truncated| truncated or (not damage.nil? and damage > threshold) }
     end
   end
-  persist :damaged?
+  #persist :damaged?
 
   property :sift_scores => :array2single do
     begin
@@ -188,7 +190,7 @@ module MutatedIsoform
       #range.values_at *values
     end
   end
-  persist :sift_scores
+  #persist :sift_scores
 
   property :mutation_assessor_scores => :array2single do
     begin
@@ -236,14 +238,14 @@ module MutatedIsoform
       range.values_at *new.values_at(*self)
     end
   end
-  persist :mutation_assessor_scores
+  #persist :mutation_assessor_scores
 
   property :pdbs => :single do
     uniprot = self.transcript.protein.uniprot
     next if uniprot.nil?
     UniProt.pdbs_covering_aa_position(uniprot, self.position)
   end
-  persist :pdbs
+  #persist :pdbs
 
   property :pdbs_and_positions => :single do
     pdbs.collect do |pdb, info|

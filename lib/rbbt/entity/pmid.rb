@@ -6,10 +6,12 @@ module PMID
   extend Entity
   include Document
 
+  self.annotation :default_type
+
   self.format = "PMID"
 
   property :docid => :single do |*args|
-    type = args.first
+    type = args.first || default_type
     ["PMID", self, type].compact * ":"
   end
 
@@ -20,25 +22,21 @@ module PMID
   property :abstract => :array2single do
     article.collect{|a| a.nil? ? nil : a.abstract}
   end
-  persist :abstract
 
   property :title => :array2single do
     article.collect{|a| a.nil? ? nil : a.title}
   end
-  persist :title
 
   property :journal => :array2single do
     article.collect{|a| a.nil? ? nil : a.journal}
   end
-  persist :journal
 
   property :year => :array2single do
     article.collect{|a| a.nil? ? nil : a.year}
   end
-  persist :year
 
   property :_get_text => :array2single do |*args|
-    type = args.first
+    type = args.first || default_type
 
     case type.to_s
     when "full_text", 'fulltext'

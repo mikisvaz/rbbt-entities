@@ -53,8 +53,16 @@ class TestEntity < Test::Unit::TestCase
 
     assert_equal "2gnirtS", a.reverse_text_ary.last
     assert_equal 1, $count
+    a._ary_property_cache.clear
     assert_equal "2gnirtS", a[1].reverse_text_ary
     assert_equal 2, $count
+    a._ary_property_cache.clear
+
+    $count = 0
+    a.each do |string|
+      string.reverse_text_ary
+      assert_equal 1, $count
+    end
   end
 
   def test_property_single
