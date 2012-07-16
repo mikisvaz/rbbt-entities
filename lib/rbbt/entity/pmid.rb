@@ -1,6 +1,7 @@
 require 'rbbt/entity'
 require 'rbbt/entity/document'
 require 'rbbt/sources/pubmed'
+require 'rbbt/sources/gscholar'
 
 module PMID
   extend Entity
@@ -33,6 +34,18 @@ module PMID
 
   property :year => :array2single do
     article.collect{|a| a.nil? ? nil : a.year}
+  end
+
+  property :cites => :single2array do
+    if title
+      begin
+        GoogleScholar.number_cites(title)
+      rescue
+        nil
+      end
+    else
+      nil
+    end
   end
 
   property :_get_text => :array2single do |*args|

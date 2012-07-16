@@ -8,7 +8,7 @@ require 'rbbt/entity/pmid'
 class TestProtein < Test::Unit::TestCase
   
   def test_pmid_id
-    assert_match /^PMID/, PMID.setup("21904853").id
+    assert_match /^PMID/, PMID.setup("21904853").docid
   end
 
   def test_pmid_text
