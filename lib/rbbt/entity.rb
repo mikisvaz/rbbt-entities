@@ -56,7 +56,7 @@ module Entity
       def clean_annotations
         case
         when self.nil?
-          self
+          nil
         when String === self
           "" << self
         when self.respond_to?(:annotated_array_clean_collect)
