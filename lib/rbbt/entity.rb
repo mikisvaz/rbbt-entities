@@ -76,6 +76,11 @@ module Entity
         clean_annotations.to_yaml(*args)
       end
 
+      def encode_with(coder)
+        coder.scalar = clean_annotations
+      end
+
+
       def marshal_dump
         clean_annotations
       end
