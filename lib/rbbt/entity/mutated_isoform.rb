@@ -175,19 +175,15 @@ module MutatedIsoform
     begin
       missense = self.select{|iso_mut| iso_mut.consequence == "MISS-SENSE"}
 
-      values = SIFT.chunked_predict(missense).values_at(*self).collect{|v|
-        v.nil? ? nil : 1.0 - v["Score 1"].to_f
-      }
-
-      values
-
-      #range = {nil => nil,
-      #  ""  => nil,
-      #  "TOLERATED" => 0,
-      #  "*DAMAGING" => 1,
-      #  "DAMAGING" => 1}
-
-      #range.values_at *values
+      begin
+        values = SIFT.chunked_predict(missense).values_at(*self).collect{|v|
+          v.nil? ? nil : 1.0 - v["Score 1"].to_f
+        }
+        values
+      rescue
+        Log.warn $!.message
+        [nil] * self.length
+      end
     end
   end
   #persist :sift_scores

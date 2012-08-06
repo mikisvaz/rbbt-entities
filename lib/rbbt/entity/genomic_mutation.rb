@@ -223,7 +223,8 @@ module GenomicMutation
   persist :affected_exons
 
   property :damaging? => :array2single do |*args|
-    damaged_mutated_isoforms = mutated_isoforms.compact.flatten.select{|mi| mi.damaged?(*args)}
+    all_mutated_isoforms = mutated_isoforms.compact.flatten
+    damaged_mutated_isoforms = all_mutated_isoforms.select{|mi| mi.damaged?(*args)}
     exon_junctions.zip(mutated_isoforms).collect do |exs, mis|
       (Array === exs and exs.any?) or
       (Array === mis and (damaged_mutated_isoforms & mis).any?)
