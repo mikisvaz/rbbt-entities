@@ -111,6 +111,9 @@ module Entity
         self.remove_method persisted_name if methods.include? persisted_name
 
         case type
+        when :both
+          define_method name, &block 
+ 
         when :single, :single2array
           single_name = "_single_" << name
           define_method single_name, &block 

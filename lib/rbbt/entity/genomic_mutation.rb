@@ -38,6 +38,15 @@ module GenomicMutation
     @watson
   end
 
+  property :bases_in_range => :single2array do |range|
+    start = range.begin+position-1
+    eend = range.end - range.begin + 1
+    File.open(Organism[organism]["chromosome_#{chromosome}"].find) do |f|
+      f.seek start
+      f.read eend
+    end
+  end
+
   property :ensembl_browser => :single2array do
     "http://#{Misc.ensembl_server(self.organism)}/Homo_sapiens/Location/View?db=core&r=#{chromosome}:#{position - 100}-#{position + 100}"
   end
@@ -232,3 +241,4 @@ module GenomicMutation
   end
   persist :damaging?
 end
+

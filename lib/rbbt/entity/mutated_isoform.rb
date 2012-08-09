@@ -9,6 +9,7 @@ require 'rbbt/entity/gene'
 require 'nokogiri'
 
 Workflow.require_workflow 'structure'
+Workflow.require_workflow 'MutEval'
 
 module MutatedIsoform
   extend Entity
@@ -171,70 +172,98 @@ module MutatedIsoform
   end
   #persist :damaged?
 
+  #property :sift_scores => :array2single do
+  #  begin
+  #    missense = self.select{|iso_mut| iso_mut.consequence == "MISS-SENSE"}
+
+  #    begin
+  #      predictions = SIFT.chunked_predict(missense)
+  #      values = predictions.values_at(*self).collect{|v|
+  #        v.nil? ? nil : 1.0 - v["Score 1"].to_f
+  #      }
+  #      values
+  #    rescue
+  #      Log.warn $!.message
+  #      [nil] * self.length
+  #    end
+  #  end
+  #end
+
   property :sift_scores => :array2single do
     begin
-      missense = self.select{|iso_mut| iso_mut.consequence == "MISS-SENSE"}
-
-      begin
-        values = SIFT.chunked_predict(missense).values_at(*self).collect{|v|
-          v.nil? ? nil : 1.0 - v["Score 1"].to_f
-        }
-        values
-      rescue
-        Log.warn $!.message
-        [nil] * self.length
-      end
+      missense = self.select{|mutation| mutation.consequence == "MISS-SENSE"}
+      MutEval.job(:sift, "MutatedIsoform", :mutations => missense.sort, :organism => organism).run.values_at(*self).collect{|v| (v.nil? or v["SIFT Score"].nil?) ? nil : 1.0 - v["SIFT Score"].to_f}
+    rescue
+      Log.warn $!.message
+      [nil] * self.length
     end
   end
   #persist :sift_scores
 
+  #property :mutation_assessor_scores => :array2single do
+  #  begin
+  #    missense = self.select{|mutation| mutation.consequence == "MISS-SENSE"}
+
+  #    correspondance = {}
+  #    list = missense.zip(missense.protein.to "UniProt/SwissProt ID").collect do |mutation, uniprot|
+  #      prot, change = mutation.split(":")
+  #      next if uniprot.nil?
+  #      uniprot_change = [uniprot.upcase, change.upcase]
+  #      correspondance[uniprot_change] ||= []
+  #      correspondance[uniprot_change] << mutation
+  #      uniprot_change
+  #    end.compact
+
+  #    return [nil] * self.length if list.empty?
+
+  #    tsv = MutationAssessor.chunked_predict(list.sort_by{|p| p * "_"})
+
+  #    return [nil] * self.length if tsv.empty?
+
+  #    new = TSV.setup({}, :key_field => "Mutated Isoform", :fields => ["Func. Impact"], :type => :list)
+
+  #    tsv.each do |key, values|
+  #      uniprot, change = key.split(" ")
+  #      uniprot_change = [uniprot.upcase, change.upcase]
+  #      
+  #      if correspondance.include? uniprot_change
+  #        correspondance[uniprot_change].each do |mutation|
+  #          new[mutation] = values["Func. Impact"]
+  #        end
+  #      else
+  #        Log.medium "Correspondace value missing: #{uniprot_change.inspect}"
+  #      end
+  #    end
+
+
+  #    range = {nil => nil,
+  #      ""  => nil,
+  #      "neutral" => 0,
+  #      "low" => 0.5,
+  #      "medium" => 0.7,
+  #      "high" => 1.0}
+
+  #    range.values_at *new.values_at(*self)
+  #  end
+  #end
+  #persist :mutation_assessor_scores
+
   property :mutation_assessor_scores => :array2single do
+    range = {nil => nil,
+      ""  => nil,
+      "neutral" => 0,
+      "low" => 0.5,
+      "medium" => 0.7,
+      "high" => 1.0}
+
     begin
       missense = self.select{|mutation| mutation.consequence == "MISS-SENSE"}
-
-      correspondance = {}
-      list = missense.zip(missense.protein.to "UniProt/SwissProt ID").collect do |mutation, uniprot|
-        prot, change = mutation.split(":")
-        next if uniprot.nil?
-        uniprot_change = [uniprot.upcase, change.upcase]
-        correspondance[uniprot_change] ||= []
-        correspondance[uniprot_change] << mutation
-        uniprot_change
-      end.compact
-
-      return [nil] * self.length if list.empty?
-
-      tsv = MutationAssessor.chunked_predict(list.sort_by{|p| p * "_"})
-
-      return [nil] * self.length if tsv.empty?
-
-      new = TSV.setup({}, :key_field => "Mutated Isoform", :fields => ["Func. Impact"], :type => :list)
-
-      tsv.each do |key, values|
-        uniprot, change = key.split(" ")
-        uniprot_change = [uniprot.upcase, change.upcase]
-        
-        if correspondance.include? uniprot_change
-          correspondance[uniprot_change].each do |mutation|
-            new[mutation] = values["Func. Impact"]
-          end
-        else
-          Log.medium "Correspondace value missing: #{uniprot_change.inspect}"
-        end
-      end
-
-
-      range = {nil => nil,
-        ""  => nil,
-        "neutral" => 0,
-        "low" => 0.5,
-        "medium" => 0.7,
-        "high" => 1.0}
-
-      range.values_at *new.values_at(*self)
+      MutEval.job(:mutation_assessor, "MutatedIsoform", :mutations => missense.sort, :organism => organism).run.values_at(*self).collect{|v| (v.nil? or v["Mutation Assessor Prediction"].nil?) ? nil : range[v["Mutation Assessor Prediction"]]}
+    rescue
+      Log.warn $!.message
+      [nil] * self.length
     end
   end
-  #persist :mutation_assessor_scores
 
   property :pdbs => :single do
     uniprot = self.transcript.protein.uniprot
