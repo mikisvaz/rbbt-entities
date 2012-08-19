@@ -96,7 +96,11 @@ module Gene
   end
 
   property :strand => :array2single do 
-    Organism.gene_positions(organism).tsv(:fields => ["Strand"], :type => :single, :persist => true).values_at *self
+    @@strand_tsv ||= {}
+    @@strand_tsv[organism] ||= Organism.gene_positions(organism).tsv(:fields => ["Strand"], :type => :single, :persist => true)
+    to("Ensembl Gene ID").collect do |gene|
+      @@strand_tsv[organism][gene]
+    end
   end
   persist :_ary_strand
 
@@ -182,13 +186,14 @@ module Gene
   persist :max_protein_length
 
   property :chromosome => :array2single do
-    chromosome_tsv = Organism.gene_positions(organism).tsv :fields => ["Chromosome Name"], :type => :single, :persist => true, :unnamed => true
+    @@chromosome_tsv ||= {}
+    @@chromosome_tsv[organism] ||= Organism.gene_positions(organism).tsv :fields => ["Chromosome Name"], :type => :single, :persist => true, :unnamed => true
     if Array === self
       to("Ensembl Gene ID").collect do |gene|
-        chromosome_tsv[gene]
+        @@chromosome_tsv[organism][gene]
       end
     else
-      chromosome_tsv[to("Ensembl Gene ID")]
+      @@chromosome_tsv[organism][to("Ensembl Gene ID")]
     end
   end
   persist :chromosome
@@ -208,8 +213,9 @@ module Gene
   persist :articles
 
   property :sequence => :array2single do
-    @@sequence_tsv = Organism.gene_sequence(organism).tsv :persist => true, :unnamed => true
-    @@sequence_tsv.values_at *self.ensembl
+    @@sequence_tsv ||= {}
+    @@sequence_tsv[organism] ||= Organism.gene_sequence(organism).tsv :persist => true, :unnamed => true
+    @@sequence_tsv[organism].values_at *self.ensembl
   end
   persist :sequence
 
