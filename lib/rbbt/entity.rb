@@ -6,7 +6,7 @@ module Entity
   end
 
   self.entity_property_cache = "var/entity_property"
-  self.entity_list_cache = "var/entity_list"
+  self.entity_list_cache     = "var/entity_list"
   self.formats = {}
   
   UNPERSISTED_PREFIX = "entity_unpersisted_property_"

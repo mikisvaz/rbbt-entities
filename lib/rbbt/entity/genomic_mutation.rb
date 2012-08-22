@@ -135,7 +135,8 @@ module GenomicMutation
   persist :to_watson
 
   property :reference => :array2single do
-    Sequence.job(:reference_allele_at_genomic_positions, jobname, :positions => self.clean_annotations, :organism => organism).run.values_at *self
+    tsv = Sequence.job(:reference_allele_at_genomic_positions, jobname, :positions => self.clean_annotations, :organism => organism).run
+    tsv.values_at *self
   end
   persist :reference
 
@@ -182,15 +183,15 @@ module GenomicMutation
   persist :offset_in_genes
 
   property :genes => :array2single do
-    genes = Sequence.job(:genes_at_genomic_positions, jobname, :organism => organism, :positions => self.clean_annotations).run
-    genes.unnamed = true
-    genes = genes.values_at *self
+    genes_tsv = Sequence.job(:genes_at_genomic_positions, jobname, :organism => organism, :positions => self.clean_annotations).run
+    genes_tsv.unnamed = true
+    genes = genes_tsv.chunked_values_at self
     Gene.setup(genes, "Ensembl Gene ID", organism)
   end
   persist :genes
 
   property :mutated_isoforms => :array2single do
-    res = Sequence.job(:mutated_isoforms_for_genomic_mutations, jobname, :watson => watson, :organism => organism, :mutations => self.clean_annotations).run.values_at *self
+    res = Sequence.job(:mutated_isoforms_for_genomic_mutations, jobname, :watson => watson, :organism => organism, :mutations => self.clean_annotations).run.chunked_values_at self
     res.each{|list| list.organism = organism unless list.nil?}
     res.compact[0].annotate res if res.compact[0].respond_to? :annotate
     res
@@ -198,7 +199,7 @@ module GenomicMutation
   persist :mutated_isoforms
 
   property :exon_junctions => :array do
-    Sequence.job(:exon_junctions_at_genomic_positions, jobname, :organism => organism, :positions => self.clean_annotations).run.values_at(*self)
+    Sequence.job(:exon_junctions_at_genomic_positions, jobname, :organism => organism, :positions => self.clean_annotations).run.chunked_values_at(self)
   end
   persist :exon_junctions
 
@@ -227,7 +228,7 @@ module GenomicMutation
   persist :_ary_over_gene?
 
   property :affected_exons  => :array2single do
-    Sequence.job(:exons_at_genomic_positions, jobname, :organism => organism, :positions => self.clean_annotations).run.values_at *self
+    Sequence.job(:exons_at_genomic_positions, jobname, :organism => organism, :positions => self.clean_annotations).run.chunked_values_at self
   end
   persist :affected_exons
 
