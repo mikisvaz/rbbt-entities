@@ -68,7 +68,7 @@ module Protein
   end
 
   property :gene => :array do
-    Gene.setup(to("Ensembl Protein ID").clean_annotations, "Ensembl Protein ID", organism)
+    Gene.setup(to("Ensembl Protein ID").clean_annotations, "Ensembl Protein ID", organism).ensembl
   end
   persist :gene #, :yaml, :file => '/tmp/testes'
 
