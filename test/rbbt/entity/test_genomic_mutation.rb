@@ -9,14 +9,35 @@ class TestGenomicMutation < Test::Unit::TestCase
   MUTATION = GenomicMutation.setup("10:124745844:A:158", "Test", "Hsa/jun2011")
   SPLICING = GenomicMutation.setup("18:14787040:A", "Test", "Hsa/jun2011")
 
+  FORWARD_STRAND_FIRST_EXON_START = GenomicMutation.setup("10:89622870", "Test", "Hsa/jun2011")
+  FORWARD_STRAND_FIRST_EXON_END   = GenomicMutation.setup("10:89624305", "Test", "Hsa/jun2011")
+  FORWARD_STRAND_LAST_EXON_START  = GenomicMutation.setup("10:89725044", "Test", "Hsa/jun2011")
+  FORWARD_STRAND_LAST_EXON_END    = GenomicMutation.setup("10:89731687", "Test", "Hsa/jun2011")
+
+  REVERSE_STRAND_FIRST_EXON_START = GenomicMutation.setup("2:198256698", "Test", "Hsa/jun2011")
+  REVERSE_STRAND_FIRST_EXON_END   = GenomicMutation.setup("2:198257185", "Test", "Hsa/jun2011")
+  REVERSE_STRAND_LAST_EXON_START  = GenomicMutation.setup("2:198299696", "Test", "Hsa/jun2011")
+  REVERSE_STRAND_LAST_EXON_END    = GenomicMutation.setup("2:198299815", "Test", "Hsa/jun2011")
+
+
   def test_mutated_isoforms
     assert MUTATION.mutated_isoforms.length > 1
-    assert ["PSTK"], MUTATION.mutated_isoforms.protein.gene.to("Associated Gene Name").uniq
+    assert_equal ["PSTK"], MUTATION.mutated_isoforms.protein.gene.to("Associated Gene Name").uniq
   end
 
   def test_exon_junction
     assert(!(MUTATION.in_exon_junction?))
     assert SPLICING.in_exon_junction?
+
+    assert(!(FORWARD_STRAND_FIRST_EXON_START.in_exon_junction?))
+    assert( (FORWARD_STRAND_FIRST_EXON_END.in_exon_junction?))
+    assert( (FORWARD_STRAND_LAST_EXON_START.in_exon_junction?))
+    assert(!(FORWARD_STRAND_LAST_EXON_END.in_exon_junction?))
+
+    assert(!(REVERSE_STRAND_FIRST_EXON_START.in_exon_junction?))
+    assert( (REVERSE_STRAND_FIRST_EXON_END.in_exon_junction?))
+    assert( (REVERSE_STRAND_LAST_EXON_START.in_exon_junction?))
+    assert(!(REVERSE_STRAND_LAST_EXON_END.in_exon_junction?))
   end
 
   def test_over_gene

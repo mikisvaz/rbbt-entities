@@ -204,7 +204,32 @@ module GenomicMutation
   persist :exon_junctions
 
   property :in_exon_junction? => :array2single do
-    exon_junctions.collect{|l| not l.nil? and not l.empty?}
+    @@exon_position_index ||= Organism.exons(organism).tsv :persist => true, :type => :list, :cast => :to_i, :fields => ["Exon Strand", "Exon Chr Start", "Exon Chr End"]
+
+    all_exons = self.genes.flatten.transcripts.compact.flatten.collect{|t| t.exons}.compact.flatten.uniq.sort_by{|e| @@exon_position_index[e]["Exon Chr Start"]}
+
+
+    first_exon = all_exons.first
+    last_exon = all_exons.last
+
+    exon_junctions.collect{|l| 
+      l.select{|j|
+        exon, junction_type = j.split(":")
+        strand = @@exon_position_index[exon]["Exon Strand"]
+        case
+        when (strand == 1 and exon == first_exon and junction_type =~ /acceptor/)
+          false
+        when (strand == 1 and exon == last_exon and junction_type =~ /donor/)
+          false
+        when (strand == -1 and exon == first_exon and junction_type =~ /donor/)
+          false
+        when (strand == -1 and exon == last_exon and junction_type =~ /acceptor/)
+          false
+        else
+          true
+        end
+      }
+    }.collect{|l| not l.nil? and not l.empty?}
   end
   persist :in_exon_junction?
 

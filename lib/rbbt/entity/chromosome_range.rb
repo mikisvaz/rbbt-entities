@@ -31,7 +31,7 @@ module ChromosomeRange
   property :unit => :array2single do
     self.collect{|range|
       chr, start, eend = range.split(":")
-      [chr, text_to_unit(start), text_to_unit(eend)] * ":"
+      [chr, ChromosomeRange.text_to_unit(start), ChromosomeRange.text_to_unit(eend)] * ":"
     }
   end
   persist :unit
