@@ -5,6 +5,7 @@ require 'rbbt/mutation/mutation_assessor'
 require 'rbbt/mutation/sift'
 require 'rbbt/entity/protein'
 require 'rbbt/sources/uniprot'
+require 'rbbt/sources/InterPro'
 require 'rbbt/entity/gene'
 require 'nokogiri'
 
@@ -95,6 +96,62 @@ module MutatedIsoform
     end
   end
 
+  property :affected_interpro_domains => :single do
+    if protein.nil?
+      []
+    else
+      InterProDomain.setup(Misc.zip_fields(protein.interpro_domain_positions || []).select{|d,s,e|
+        e.to_i > position and s.to_i < position
+      }.collect{|d,s,e| d }, organism)
+    end
+  end
+
+  property :affected_interpro_domain_positions => :single do
+    if protein.nil?
+      []
+    else
+      Misc.zip_fields(protein.interpro_domain_positions || []).select{|d,s,e|
+        e.to_i > position and s.to_i < position
+      }.collect{|d,s,e| [d, position - s.to_i, s.to_i, e.to_i]}
+    end
+  end
+
+  property :affected_domain_positions => :single do
+    affected_interpro_domain_positions
+  end
+
+  property :affected_domains => :single do
+    affected_interpro_domains
+  end
+
+  property :ablated_interpro_domains => :single do
+    if protein.nil?
+      []
+    else
+      InterProDomain.setup(Misc.zip_fields(protein.interpro_domain_positions || []).select{|d,s,e|
+        e.to_i > position
+      }.collect{|d,s,e| d }, organism)
+    end
+  end
+
+  property :ablated_interpro_domain_positions => :single do
+    if protein.nil?
+      []
+    else
+      Misc.zip_fields(protein.interpro_domain_positions || []).select{|d,s,e|
+        e.to_i > position
+      }.collect{|d,s,e| [d, s.to_i, e.to_i]}
+    end
+  end
+
+  property :ablated_domain_positions => :single do
+    ablated_interpro_domain_positions
+  end
+
+  property :ablated_domains => :single do
+    ablated_interpro_domains
+  end
+
   property :truncated => :array2single do
     begin
       proteins = self.protein.compact.flatten
@@ -102,21 +159,23 @@ module MutatedIsoform
 
       self.collect do |isoform_mutation|
 
-                       next if isoform_mutation.consequence != "FRAMESHIFT" and isoform_mutation.consequence != "NONSENSE"
-                       protein  = isoform_mutation.protein
-                       position = isoform_mutation.position
-                       sequence_length = protein2sequence_length[protein]
+        next if isoform_mutation.consequence != "FRAMESHIFT" and isoform_mutation.consequence != "NONSENSE"
+        protein  = isoform_mutation.protein
+        position = isoform_mutation.position
+        sequence_length = protein2sequence_length[protein]
 
-                       case
-                       when (sequence_length.nil? or position.nil?)
-                         nil
-                       when position < sequence_length.to_f * 0.7
-                         true
-                       else
-                         false
-                       end
-                     end
-                   end
+        case
+        when (sequence_length.nil? or position.nil?)
+          nil
+        when position < sequence_length.to_f * 0.7
+          true
+        when (isoform_mutation.ablated_domains.any?)
+          true
+        else
+          false
+        end
+      end
+    end
   end
 
   property :damage_scores => :array2single do |*args|
@@ -158,7 +217,7 @@ module MutatedIsoform
       threshold     = 0.8 if threshold.nil?
       damage_scores = self.damage_scores(methods)
       truncated     = self.truncated
-      
+
       damage_scores.zip(truncated).collect{|damage, truncated| truncated or (not damage.nil? and damage > threshold) }
     end
   end

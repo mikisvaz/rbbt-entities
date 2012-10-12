@@ -266,5 +266,24 @@ module GenomicMutation
     end
   end
   persist :damaging?
+
+  property :worst_consequence => :array2single do 
+    all_mutated_isoforms = mutated_isoforms.compact.flatten
+    non_synonymous_mutated_isoforms = all_mutated_isoforms.select{|mi| mi.consequence !~ /SYNONYMOUS|UTR/}
+    truncated_mutated_isoforms = all_mutated_isoforms.select{|mi| mi.truncated}
+    damage_scores = Misc.process_to_hash(non_synonymous_mutated_isoforms){|mis| mis.damage_scores}
+    in_exon_junction?.zip(mutated_isoforms).collect{|ej,mis|
+      case
+      when (mis.nil? or mis.subset(non_synonymous_mutated_isoforms).empty? and ej)
+        "In Exon Junction"
+      when mis.subset(truncated_mutated_isoforms).any?
+        mis.subset(truncated_mutated_isoforms).first
+      when (mis.subset(non_synonymous_mutated_isoforms).any?)
+        mis.subset(non_synonymous_mutated_isoforms).sort_by{|mi| damage_scores[mi] || 0}.last
+      else
+        []
+      end
+    }
+  end
 end
 
