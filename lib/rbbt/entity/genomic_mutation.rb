@@ -206,7 +206,7 @@ module GenomicMutation
   property :in_exon_junction? => :array2single do
     @@exon_position_index ||= Organism.exons(organism).tsv :persist => true, :type => :list, :cast => :to_i, :fields => ["Exon Strand", "Exon Chr Start", "Exon Chr End"]
 
-    all_exons = self.genes.flatten.transcripts.compact.flatten.collect{|t| t.exons}.compact.flatten.uniq.sort_by{|e| @@exon_position_index[e]["Exon Chr Start"]}
+    all_exons = self.genes.flatten.transcripts.compact.flatten.collect{|t| t.exons}.compact.flatten.uniq.select{|e| @@exon_position_index.include?(e) }.sort_by{|e|  @@exon_position_index[e]["Exon Chr Start"] }
 
 
     first_exon = all_exons.first
@@ -271,7 +271,7 @@ module GenomicMutation
     all_mutated_isoforms = mutated_isoforms.compact.flatten
     non_synonymous_mutated_isoforms = all_mutated_isoforms.select{|mi| mi.consequence !~ /SYNONYMOUS|UTR/}
     truncated_mutated_isoforms = all_mutated_isoforms.select{|mi| mi.truncated}
-    damage_scores = Misc.process_to_hash(non_synonymous_mutated_isoforms){|mis| mis.damage_scores}
+    damage_scores = Misc.process_to_hash(non_synonymous_mutated_isoforms){|mis| mis.any? ? mis.damage_scores : []}
     in_exon_junction?.zip(mutated_isoforms).collect{|ej,mis|
       case
       when (mis.nil? or mis.subset(non_synonymous_mutated_isoforms).empty? and ej)
