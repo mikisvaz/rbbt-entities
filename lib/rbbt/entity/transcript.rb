@@ -35,7 +35,7 @@ module Transcript
     @@enst2ense ||= {}
     @@enst2ense[organism] ||= Organism.transcript_exons(organism).tsv(:persist => true, :fields => "Ensembl Exon ID", :unnamed => true)
     res = if Array === transcript
-            @@enst2ense[organism].values_at *transcript
+            @@enst2ense[organism].chunked_values_at transcript
           else
             @@enst2ense[organism][transcript]
           end
