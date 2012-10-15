@@ -276,9 +276,9 @@ module GenomicMutation
       case
       when (mis.nil? or mis.subset(non_synonymous_mutated_isoforms).empty? and ej)
         "In Exon Junction"
-      when mis.subset(truncated_mutated_isoforms).any?
+      when (Array === mis and mis.subset(truncated_mutated_isoforms).any?)
         mis.subset(truncated_mutated_isoforms).first
-      when (mis.subset(non_synonymous_mutated_isoforms).any?)
+      when (Array === mis and mis.subset(non_synonymous_mutated_isoforms).any?)
         mis.subset(non_synonymous_mutated_isoforms).sort_by{|mi| damage_scores[mi] || 0}.last
       else
         []
