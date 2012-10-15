@@ -38,6 +38,11 @@ module GenomicMutation
     @watson
   end
 
+  def self.exon_position_index(organism)
+    @@exon_position_indices ||= {}
+    @@exon_position_indices[organism] ||= Organism.exons(organism).tsv :persist => true, :type => :list, :cast => :to_i, :fields => ["Exon Strand", "Exon Chr Start", "Exon Chr End"]
+  end
+
   property :bases_in_range => :single2array do |range|
     start = range.begin+position-1
     eend = range.end - range.begin + 1
@@ -136,7 +141,7 @@ module GenomicMutation
 
   property :reference => :array2single do
     tsv = Sequence.job(:reference_allele_at_genomic_positions, jobname, :positions => self.clean_annotations, :organism => organism).run
-    tsv.values_at *self
+    tsv.chunked_values_at self
   end
   persist :reference
 
@@ -204,9 +209,9 @@ module GenomicMutation
   persist :exon_junctions
 
   property :in_exon_junction? => :array2single do
-    @@exon_position_index ||= Organism.exons(organism).tsv :persist => true, :type => :list, :cast => :to_i, :fields => ["Exon Strand", "Exon Chr Start", "Exon Chr End"]
+    exon_position_index ||= GenomicMutation.exon_position_index(organism)
 
-    all_exons = self.genes.flatten.transcripts.compact.flatten.collect{|t| t.exons}.compact.flatten.uniq.select{|e| @@exon_position_index.include?(e) }.sort_by{|e|  @@exon_position_index[e]["Exon Chr Start"] }
+    all_exons = self.genes.flatten.transcripts.compact.flatten.collect{|t| t.exons}.compact.flatten.uniq.select{|e| exon_position_index.include?(e) }.sort_by{|e| exon_position_index[e]["Exon Chr Start"] }
 
 
     first_exon = all_exons.first
@@ -215,10 +220,10 @@ module GenomicMutation
     exon_junctions.collect{|l| 
       l.select{|j|
         exon, junction_type = j.split(":")
-        if not @@exon_position_index.include? exon
+        if not exon_position_index.include? exon
           raise "Exon #{ exon } not in position index"
         end
-        strand = @@exon_position_index[exon]["Exon Strand"]
+        strand = exon_position_index[exon]["Exon Strand"]
         case
         when (strand == 1 and exon == first_exon and junction_type =~ /acceptor/)
           false
