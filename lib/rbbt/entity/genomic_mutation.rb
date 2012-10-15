@@ -215,6 +215,9 @@ module GenomicMutation
     exon_junctions.collect{|l| 
       l.select{|j|
         exon, junction_type = j.split(":")
+        if not @@exon_position_index.include? exon
+          raise "Exon #{ exon } not in position index"
+        end
         strand = @@exon_position_index[exon]["Exon Strand"]
         case
         when (strand == 1 and exon == first_exon and junction_type =~ /acceptor/)
@@ -281,7 +284,7 @@ module GenomicMutation
       when (Array === mis and mis.subset(non_synonymous_mutated_isoforms).any?)
         mis.subset(non_synonymous_mutated_isoforms).sort_by{|mi| damage_scores[mi] || 0}.last
       else
-        []
+        nil
       end
     }
   end
