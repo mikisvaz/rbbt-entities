@@ -160,6 +160,7 @@ module Entity
         define_method method_name do |*args|
           id = self.id
           persist_name = __method__.to_s << ":" << (Array === id ? Misc.hash2md5(:id => id) : id)
+          persist_name << ":" << Misc.hash2md5({:args => args}) unless args.nil? or args.empty?
 
           persist_options = options
           persist_options = persist_options.merge(:other => {:args => args}) if args.any?

@@ -77,7 +77,7 @@ module Gene
   self.annotation :format
   self.annotation :organism
 
-  self.format = Organism::Hsa.identifiers.all_fields - ["Ensembl Protein ID", "Ensembl Transcript ID"]
+  self.format = Organism.identifiers("Hsa").all_fields - ["Ensembl Protein ID", "Ensembl Transcript ID"]
 
   property :ortholog => :array2single do |other|
     return self if organism =~ /^#{ other }(?!\w)/
