@@ -214,6 +214,7 @@ module MutatedIsoform
   property :damaged? => :array2single do |*args|
     begin
       methods, threshold = args
+      threshold, methods = methods, nil if threshold.nil? and not Array === methods
       threshold     = 0.8 if threshold.nil?
       damage_scores = self.damage_scores(methods)
       truncated     = self.truncated

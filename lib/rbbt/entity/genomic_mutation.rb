@@ -275,11 +275,12 @@ module GenomicMutation
   end
   persist :damaging?
 
-  property :worst_consequence => :array2single do 
+  property :worst_consequence => :array2single do
     all_mutated_isoforms = mutated_isoforms.compact.flatten
     non_synonymous_mutated_isoforms = all_mutated_isoforms.select{|mi| mi.consequence !~ /SYNONYMOUS|UTR/}
     truncated_mutated_isoforms = all_mutated_isoforms.select{|mi| mi.truncated}
     damage_scores = Misc.process_to_hash(non_synonymous_mutated_isoforms){|mis| mis.any? ? mis.damage_scores : []}
+    damaged = all_mutated_isoforms.select{|mi| mi.damaged? }
     in_exon_junction?.zip(mutated_isoforms).collect{|ej,mis|
       case
       when (mis.nil? or mis.subset(non_synonymous_mutated_isoforms).empty? and ej)
@@ -287,7 +288,18 @@ module GenomicMutation
       when (Array === mis and mis.subset(truncated_mutated_isoforms).any?)
         mis.subset(truncated_mutated_isoforms).first
       when (Array === mis and mis.subset(non_synonymous_mutated_isoforms).any?)
-        mis.subset(non_synonymous_mutated_isoforms).sort_by{|mi| damage_scores[mi] || 0}.last
+        mis.subset(non_synonymous_mutated_isoforms).sort{|mi1, mi2| 
+          ds1 = damage_scores[mi1] || 0
+          ds2 = damage_scores[mi2] || 0
+          case
+          when (damaged.include?(mi1) == damaged.include?(mi2))
+            d1 = mi1.protein.interpro_domains || []
+            d2 = mi2.protein.interpro_domains || []
+            d1.length <=> d2.length
+          else
+            ds1 <=> ds2
+          end
+        }.last
       else
         nil
       end
