@@ -155,7 +155,7 @@ module Entity
         options = Misc.add_defaults options, :dir => Entity.entity_property_cache
 
         orig_name = UNPERSISTED_PREFIX + method_name.to_s
-        alias_method orig_name, method_name unless instance_methods.include? orig_name
+        alias_method orig_name, method_name unless self.instance_methods.include? orig_name.to_sym
 
         define_method method_name do |*args|
           id = self.id
@@ -181,7 +181,7 @@ module Entity
 
       def self.persisted?(method_name)
         orig_name = UNPERSISTED_PREFIX + method_name.to_s
-        instance_methods.include? orig_name.to_s
+        instance_methods.include? orig_name.to_sym
       end
 
       def self.with_persisted(method_name)

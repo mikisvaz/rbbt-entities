@@ -34,6 +34,12 @@ module ReversableString
   property :random => :single do
     rand
   end
+
+  property :annotation_list => :single do
+    self.chars.to_a.collect{|c| 
+      ReversableString.setup(c)
+    }
+  end
  
   persist :reverse_text_ary_p
   persist :reverse_text_ary_p
@@ -41,6 +47,8 @@ module ReversableString
   persist :reverse_text_single_p
 
   persist :reverse_text_ary_p_array, :array, :dir => TmpFile.tmp_file
+
+  persist :annotation_list, :annotations, :dir => TmpFile.tmp_file
 end
 
 class TestEntity < Test::Unit::TestCase
@@ -139,5 +147,12 @@ class TestEntity < Test::Unit::TestCase
     r2 = a.random
     assert_not_equal r1, r2
 
+  end
+
+  def test_persist_annotations
+    string = 'aaabbbccc'
+    ReversableString.setup(string)
+    assert_equal string.length, string.annotation_list.length
+    assert_equal string.length, string.annotation_list.length
   end
 end
