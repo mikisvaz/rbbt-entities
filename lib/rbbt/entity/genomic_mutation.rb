@@ -277,7 +277,7 @@ module GenomicMutation
 
   property :worst_consequence => :array2single do
     all_mutated_isoforms = mutated_isoforms.compact.flatten
-    non_synonymous_mutated_isoforms = all_mutated_isoforms.select{|mi| mi.consequence !~ /SYNONYMOUS|UTR/}
+    non_synonymous_mutated_isoforms = all_mutated_isoforms.select{|mi| mi.non_synonymous}
     truncated_mutated_isoforms = all_mutated_isoforms.select{|mi| mi.truncated}
     damage_scores = Misc.process_to_hash(non_synonymous_mutated_isoforms){|mis| mis.any? ? mis.damage_scores : []}
     damaged = all_mutated_isoforms.select{|mi| mi.damaged? }

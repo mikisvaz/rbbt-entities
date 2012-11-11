@@ -96,6 +96,24 @@ module MutatedIsoform
     end
   end
 
+  property :in_utr => :array2single do
+    consequence.collect{|c|
+      c == "UTR"
+    }
+  end
+
+  property :synonymous => :array2single do
+    consequence.collect{|c|
+      c == "SYNONYMOUS"
+    }
+  end
+
+  property :non_synonymous => :array2single do
+    consequence.collect{|c|
+      not c.nil? and c != "SYNONYMOUS" and c != "UTR"
+    }
+  end
+
   property :affected_interpro_domains => :single do
     if protein.nil?
       []

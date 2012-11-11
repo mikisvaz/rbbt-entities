@@ -125,7 +125,7 @@ module Genotype
   returns "Ensembl Gene ID"
   task :with_non_synonymous_mutations => :array do
     set_info :organism, genotype.organism
-    genotype.mutated_isoforms.flatten.compact.reject{|mutated_isoform| ["SYNONYMOUS", "UTR"].include? mutated_isoform.consequence}.transcript.gene.uniq
+    genotype.mutated_isoforms.flatten.compact.select{|mutated_isoform| mutated_isoform.non_synonymous}.transcript.gene.uniq
   end
 
   returns "Ensembl Gene ID"
