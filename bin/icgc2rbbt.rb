@@ -11,7 +11,7 @@ Open.read(file).split("\n").each do |line|
   chr, pos, ref, mut, sample = line.split(/\t/).values_at 2, 3, 6, 10, 28 
 
   chr.sub!(/chr/,'')
-  mut = mut + '-' * (ref.length - mut.length) if ref.length > mut.length
+  mut = '-' * (mut.length - 1) if mut =~/^-[ACGT]/
 
   genotypes[sample] ||= []
   genotypes[sample] << [chr, pos, mut] * ":"
