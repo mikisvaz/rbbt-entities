@@ -8,7 +8,7 @@ genotypes = {}
 Open.read(file).split("\n").each do |line|
   next if line =~ /^Cancer Type/
 
-  chr, pos, ref, mut, sample = line.split(/\t/).values_at 2, 3, 6, 10, 28 
+  chr, pos, ref, mut, sample = line.split(/\t/).values_at 2, 3, 6, 10, 35 
 
   chr.sub!(/chr/,'')
   mut = '-' * (mut.length - 1) if mut =~/^-[ACGT]/
