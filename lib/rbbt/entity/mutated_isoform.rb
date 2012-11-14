@@ -18,6 +18,8 @@ module MutatedIsoform
 
   self.format = "Mutated Isoform"
 
+  DEFAULT_DAMAGE_PREDICTORS = [:sift, :mutation_assessor]
+
   property :protein => :array2single do
     proteins = self.collect{|mutation| mutation.split(":").first if mutation[0..3] == "ENSP"}
     Protein.setup(proteins, "Ensembl Protein ID", organism)
@@ -199,7 +201,8 @@ module MutatedIsoform
   property :damage_scores => :array2single do |*args|
     begin
       methods = args.first
-      methods = [:sift, :mutation_assessor] if methods.nil?
+      #methods = [:sift, :mutation_assessor] if methods.nil?
+      methods = MutatedIsoform::DEFAULT_DAMAGE_PREDICTORS if methods.nil?
       methods = [methods] unless Array === methods
       values = methods.collect{|method|
         case method.to_sym
