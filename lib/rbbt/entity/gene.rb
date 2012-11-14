@@ -138,7 +138,7 @@ module Gene
 
   property :long_name => :array2single do
     entre = self.entrez
-    gene = Entrez.get_gene(entrez).values_at(*entrez).collect{|gene| gene.nil? ? nil : gene.description.flatten.first}
+    gene = Entrez.get_gene(entrez).values_at(*entrez).collect{|gene| gene.nil? ? nil : (gene.description || []).flatten.first}
   end
   persist :long_name
 

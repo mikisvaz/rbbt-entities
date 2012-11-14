@@ -207,6 +207,10 @@ module MutatedIsoform
           sift_scores
         when :mutation_assessor
           mutation_assessor_scores
+        when :polyphen
+          polyphen_scores
+        when :snps_and_go
+          snps_and_go_scores
         else
           raise "Unknown predictive method: #{ method }"
         end
@@ -238,6 +242,31 @@ module MutatedIsoform
       truncated     = self.truncated
 
       damage_scores.zip(truncated).collect{|damage, truncated| truncated or (not damage.nil? and damage > threshold) }
+    end
+  end
+
+  property :snps_and_go_scores => :array2single do
+    begin
+      missense = self.select{|mutation| mutation.consequence == "MISS-SENSE"}
+      res = MutEval.job(:snps_and_go, "MutatedIsoform", :mutations => missense.sort, :organism => organism).run
+      res.values_at(*self).collect{|v| (v.nil? or v["SNPSandGO Score"].nil? or v["SNPSandGO Score"].empty?) ? 
+        nil : 
+        (v["SNPSandGO Prediction"] == "Disease" ? 1.0 - (10.0 - v["SNPSandGO Score"].to_f) / 20 : 0 + (10.0 - v["SNPSandGO Score"].to_f) / 20)
+      }
+    rescue
+      Log.warn $!.message
+      [nil] * self.length
+    end
+  end
+
+  property :polyphen_scores => :array2single do
+    begin
+      missense = self.select{|mutation| mutation.consequence == "MISS-SENSE"}
+      res = MutEval.job(:polyphen, "MutatedIsoform", :mutations => missense.sort, :organism => organism).run
+      res.values_at(*self).collect{|v| (v.nil? or v["Polyphen Score"].nil? or v["Polyphen Score"].empty?) ? nil : v["Polyphen Score"].to_f / 10}
+    rescue
+      Log.warn $!.message
+      [nil] * self.length
     end
   end
 
