@@ -140,7 +140,7 @@ module GenomicMutation
   persist :to_watson
 
   property :reference => :array2single do
-    tsv = Sequence.job(:reference_allele_at_genomic_positions, jobname, :positions => self.clean_annotations, :organism => organism).run
+    tsv = Sequence.job(:reference_allele_at_genomic_positions, jobname, :positions => self.clean_annotations, :organism => organism, :unnamed => true).run
     tsv.chunked_values_at self
   end
   persist :reference
