@@ -40,7 +40,7 @@ module GenomicMutation
 
   def self.exon_position_index(organism)
     @@exon_position_indices ||= {}
-    @@exon_position_indices[organism] ||= Organism.exons(organism).tsv :persist => true, :type => :list, :cast => :to_i, :fields => ["Exon Strand", "Exon Chr Start", "Exon Chr End"]
+    @@exon_position_indices[organism] ||= Organism.exons(organism).tsv :persist => true, :type => :list, :cast => :to_i, :fields => ["Exon Strand", "Exon Chr Start", "Exon Chr End"], :unnamed => true
   end
 
   property :bases_in_range => :single2array do |range|
@@ -211,7 +211,9 @@ module GenomicMutation
   property :in_exon_junction? => :array2single do
     exon_position_index ||= GenomicMutation.exon_position_index(organism)
 
-    all_exons = self.genes.flatten.transcripts.compact.flatten.collect{|t| t.exons}.compact.flatten.uniq.select{|e| exon_position_index.include?(e) }.sort_by{|e| exon_position_index[e]["Exon Chr Start"] }
+    start_pos = exon_position_index.identify_field "Exon Chr Start"
+    strand_pos = exon_position_index.identify_field "Exon Strand"
+    all_exons = self.genes.flatten.transcripts.compact.flatten.collect{|t| t.exons}.compact.flatten.uniq.select{|e| exon_position_index.include?(e) }.sort_by{|e| exon_position_index[e][start_pos] }
 
 
     first_exon = all_exons.first
@@ -223,7 +225,7 @@ module GenomicMutation
         if not exon_position_index.include? exon
           raise "Exon #{ exon } not in position index"
         end
-        strand = exon_position_index[exon]["Exon Strand"]
+        strand = exon_position_index[exon][strand_pos]
         case
         when (strand == 1 and exon == first_exon and junction_type =~ /acceptor/)
           false
