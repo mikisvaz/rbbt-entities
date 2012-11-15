@@ -10,7 +10,7 @@ module Transcript
 
   def self.enst2ensg(organism, transcript)
     @@enst2ensg ||= {}
-    @@enst2ensg[organism] ||= Organism.gene_transcripts(organism).tsv(:type => :single, :key_field => "Ensembl Transcript ID", :fields => ["Ensembl Gene ID"], :persist => true).tap{|o| o.unnamed = true}
+    @@enst2ensg[organism] ||= Organism.gene_transcripts(organism).tsv(:type => :single, :key_field => "Ensembl Transcript ID", :fields => ["Ensembl Gene ID"], :persist => true, :unnamed => true)
     res = if Array === transcript
             @@enst2ensg[organism].values_at *transcript
           else
@@ -22,7 +22,7 @@ module Transcript
 
   def self.enst2ensp(organism, transcript)
     @@enst2ensp ||= {}
-    @@enst2ensp[organism] ||= Organism.transcripts(organism).tsv(:type => :single, :key_field => "Ensembl Transcript ID", :fields => ["Ensembl Protein ID"], :persist => true)
+    @@enst2ensp[organism] ||= Organism.transcripts(organism).tsv(:type => :single, :key_field => "Ensembl Transcript ID", :fields => ["Ensembl Protein ID"], :persist => true, :unnamed => true)
     res = if Array === transcript
             @@enst2ensp[organism].values_at *transcript
           else
@@ -66,8 +66,7 @@ module Transcript
   end
 
   property :sequence => :array2single do
-    transcript_sequence = Organism.transcript_sequence(organism).tsv :persist => true
-    transcript_sequence.unnamed = true
+    transcript_sequence = Organism.transcript_sequence(organism).tsv :persist => true, :unnamed => true
     transcript_sequence.values_at *self.ensembl
   end
 

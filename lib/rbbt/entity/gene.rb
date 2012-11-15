@@ -16,7 +16,7 @@ module Gene
 
   def self.ensg2enst(organism, gene)
     @@ensg2enst ||= {}
-    @@ensg2enst[organism] ||= Organism.gene_transcripts(organism).tsv(:type => :flat, :key_field => "Ensembl Gene ID", :fields => ["Ensembl Transcript ID"], :persist => true).tap{|o| o.unnamed = true}
+    @@ensg2enst[organism] ||= Organism.gene_transcripts(organism).tsv(:type => :flat, :key_field => "Ensembl Gene ID", :fields => ["Ensembl Transcript ID"], :persist => true, :unnamed => true)
 
     if Array === gene
       @@ensg2enst[organism].values_at *gene
@@ -53,7 +53,7 @@ module Gene
 
     @@exon_range_tsv ||= {}
     organism = genes.organism
-    @@exon_range_tsv[organism] ||= Organism.exons(organism).tsv :persist => true, :fields => ["Exon Chr Start", "Exon Chr End"], :type => :list, :cast => :to_i
+    @@exon_range_tsv[organism] ||= Organism.exons(organism).tsv :persist => true, :fields => ["Exon Chr Start", "Exon Chr End"], :type => :list, :cast => :to_i, :unnamed => true
     total = 0
 
     chromosome_genes.each do |chr,gs|
@@ -84,7 +84,7 @@ module Gene
     new_organism = organism.split(":")
     new_organism[0] = other
     new_organism = new_organism * "/"
-    Gene.setup(Organism[organism]["ortholog_#{other}"].tsv(:persist => true).values_at(*self.ensembl).collect{|l| l.first}, "Ensembl Gene ID", new_organism)
+    Gene.setup(Organism[organism]["ortholog_#{other}"].tsv(:persist => true, :unnamed => true).values_at(*self.ensembl).collect{|l| l.first}, "Ensembl Gene ID", new_organism)
   end
   persist :ortholog 
 
@@ -97,7 +97,7 @@ module Gene
 
   property :strand => :array2single do 
     @@strand_tsv ||= {}
-    @@strand_tsv[organism] ||= Organism.gene_positions(organism).tsv(:fields => ["Strand"], :type => :single, :persist => true)
+    @@strand_tsv[organism] ||= Organism.gene_positions(organism).tsv(:fields => ["Strand"], :type => :single, :persist => true, :unnamed => true)
     to("Ensembl Gene ID").collect do |gene|
       @@strand_tsv[organism][gene]
     end
@@ -109,7 +109,7 @@ module Gene
   end
 
   property :biotype => :array2single do
-    Organism.gene_biotype(organism).tsv(:persist => true, :type => :single).values_at *self.ensembl
+    Organism.gene_biotype(organism).tsv(:persist => true, :type => :single, :unnamed => true).values_at *self.ensembl
   end
   persist :biotype
 
@@ -127,12 +127,12 @@ module Gene
   end
 
   property :chr_start => :array2single do
-    Organism.gene_positions(organism).tsv(:persist => true, :type => :single, :cast => :to_i, :fields => ["Gene Start"]).values_at *self
+    Organism.gene_positions(organism).tsv(:persist => true, :type => :single, :cast => :to_i, :fields => ["Gene Start"], :unnamed => true).values_at *self
   end
   persist :chr_start
 
   property :go_bp_terms => :array2single do
-    Organism.gene_go_bp(organism).tsv(:persist => true, :key_field => "Ensembl Gene ID", :fields => ["GO ID"], :type => :flat).values_at *self.ensembl
+    Organism.gene_go_bp(organism).tsv(:persist => true, :key_field => "Ensembl Gene ID", :fields => ["GO ID"], :type => :flat, :unnamed => true).values_at *self.ensembl
   end
   persist :go_bp_terms
 
@@ -199,7 +199,7 @@ module Gene
   persist :chromosome
 
   property :chr_range => :array2single do
-    chr_range_index ||= Organism.gene_positions(organism).tsv :fields => ["Gene Start", "Gene End"], :type => :list, :persist => true, :cast => :to_i
+    chr_range_index ||= Organism.gene_positions(organism).tsv :fields => ["Gene Start", "Gene End"], :type => :list, :persist => true, :cast => :to_i, :unnamed => true
     to("Ensembl Gene ID").collect do |gene|
       next if not chr_range_index.include? gene
       Range.new *chr_range_index[gene]
@@ -220,7 +220,7 @@ module Gene
   persist :sequence
 
   property :matador_drugs => :array2single do
-    @@matador ||= Matador.protein_drug.tsv(:persist => false).tap{|o| o.unnamed = true}
+    @@matador ||= Matador.protein_drug.tsv(:persist => false, :unnamed => true)
 
     ensg = self.to("Ensembl Gene ID")
 

@@ -26,8 +26,7 @@ module CNV
 
   property :genes => :array2single do
     @genes ||= begin
-                 genes = Sequence.job(:genes_at_genomic_ranges, jobname, :organism => organism, :ranges => self).run
-                 genes.unnamed = true
+                 genes = Sequence.job(:genes_at_genomic_ranges, jobname, :organism => organism, :ranges => self, :unnamed => true).run
                  genes = genes.values_at *self
                  Gene.setup(genes, "Ensembl Gene ID", organism)
                end

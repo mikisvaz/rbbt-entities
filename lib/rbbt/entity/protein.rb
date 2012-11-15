@@ -19,7 +19,7 @@ module Protein
 
   def self.ensp2sequence(organism, protein)
     @@ensp2sequence ||= {}
-    @@ensp2sequence[organism] ||= Organism.protein_sequence(organism).tsv :persist => true
+    @@ensp2sequence[organism] ||= Organism.protein_sequence(organism).tsv :persist => true, :unnamed => true
     if Array === protein
       @@ensp2sequence[organism].values_at *protein
     else
@@ -29,7 +29,7 @@ module Protein
 
   def self.ensp2enst(organism, protein)
     @@ensp2enst ||= {}
-    @@ensp2enst[organism] ||= Organism.transcripts(organism).tsv(:type => :single, :key_field => "Ensembl Protein ID", :fields => ["Ensembl Transcript ID"], :persist => true)
+    @@ensp2enst[organism] ||= Organism.transcripts(organism).tsv(:type => :single, :key_field => "Ensembl Protein ID", :fields => ["Ensembl Transcript ID"], :persist => true, :unnamed => true)
     @@ensp2enst[organism][protein]
   end
 
@@ -73,8 +73,7 @@ module Protein
   persist :gene #, :yaml, :file => '/tmp/testes'
 
   property :pfam => :array2single do
-    index = Organism.gene_pfam(organism).tsv :flat, :persist => true
-    index.unnamed = true
+    index = Organism.gene_pfam(organism).tsv :flat, :persist => true, :unnamed => true
     pfam = index.values_at(*self).flatten
     Pfam.setup pfam
   end

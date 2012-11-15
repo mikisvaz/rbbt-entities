@@ -201,7 +201,6 @@ module MutatedIsoform
   property :damage_scores => :array2single do |*args|
     begin
       methods = args.first
-      #methods = [:sift, :mutation_assessor] if methods.nil?
       methods = MutatedIsoform::DEFAULT_DAMAGE_PREDICTORS if methods.nil?
       methods = [methods] unless Array === methods
       values = methods.collect{|method|
