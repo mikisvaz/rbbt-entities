@@ -7,6 +7,7 @@ require 'rbbt/entity/genomic_mutation'
 
 class TestGenomicMutation < Test::Unit::TestCase
   MUTATION = GenomicMutation.setup("10:124745844:A:158", "Test", "Hsa/jun2011")
+  NON_CODING_MUTATION = GenomicMutation.setup("12:52844451:T", "Test", "Hsa/jun2011")
   SPLICING = GenomicMutation.setup("18:14787040:A", "Test", "Hsa/jun2011")
 
   FORWARD_STRAND_FIRST_EXON_START = GenomicMutation.setup("10:89622870", "Test", "Hsa/jun2011")
@@ -55,6 +56,12 @@ class TestGenomicMutation < Test::Unit::TestCase
     assert_equal 'transversion', mutation.type
     mutation = GenomicMutation.setup("1:1727802:G", "Test", "Hsa/may2009", true)
     assert_equal 'transition', mutation.type
+  end
+
+  def test_coding
+    assert MUTATION.coding?
+    ddd NON_CODING_MUTATION.affected_exons
+    assert(!NON_CODING_MUTATION.coding?)
   end
 
 end

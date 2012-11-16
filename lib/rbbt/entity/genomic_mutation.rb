@@ -43,6 +43,12 @@ module GenomicMutation
     @@exon_position_indices[organism] ||= Organism.exons(organism).tsv :persist => true, :type => :list, :cast => :to_i, :fields => ["Exon Strand", "Exon Chr Start", "Exon Chr End"], :unnamed => true
   end
 
+  def self.transcripts_for_exon_index(organism)
+    @@transcript_for_exon_indices ||= {}
+    @@transcript_for_exon_indices[organism] ||= Organism.transcript_exons(organism).tsv :persist => true, :type => :flat, :key_field => "Ensembl Exon ID", :fields => ["Ensembl Transcript ID"], :unnamed => true
+  end
+
+
   property :bases_in_range => :single2array do |range|
     start = range.begin+position-1
     eend = range.end - range.begin + 1
@@ -195,6 +201,23 @@ module GenomicMutation
   end
   persist :genes
 
+
+  property :affected_genes => :array2single do
+    Gene.setup(mutated_isoforms.collect{|mis|
+      genes = mis.nil? ? [] : mis.protein.gene
+      Gene.setup(genes, "Ensembl Gene ID", organism)
+    }, "Ensembl Gene ID", organism)
+  end
+
+  property :damaged_genes => :array2single do |*args|
+    mutated_isoforms = mutated_isoforms
+    mi_damaged = Misc.process_to_hash(mutated_isoforms.compact.flatten.uniq){|mis| mis.damaged?(*args)}
+    Gene.setup(mutated_isoforms.select{|mi| mi_damaged[mi]}.collect{|mis|
+      genes = mis.nil? ? [] : mis.protein.gene
+      Gene.setup(genes, "Ensembl Gene ID", organism)
+    }, "Ensembl Gene ID", organism)
+  end
+
   property :mutated_isoforms => :array2single do
     res = Sequence.job(:mutated_isoforms_for_genomic_mutations, jobname, :watson => watson, :organism => organism, :mutations => self.clean_annotations).run.chunked_values_at self
     res.each{|list| list.organism = organism unless list.nil?}
@@ -266,6 +289,14 @@ module GenomicMutation
     Sequence.job(:exons_at_genomic_positions, jobname, :organism => organism, :positions => self.clean_annotations).run.chunked_values_at self
   end
   persist :affected_exons
+
+  property :coding? => :array2single do
+    Sequence.job(:exons_at_genomic_positions, jobname, :organism => organism, :positions => self.clean_annotations).run.
+      chunked_values_at(self).
+      collect{|exons| 
+        GenomicMutation.transcripts_for_exon_index(organism).values_at(*exons).compact.flatten.any?
+      }
+  end
 
   property :damaging? => :array2single do |*args|
     all_mutated_isoforms = mutated_isoforms.compact.flatten
