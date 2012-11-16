@@ -203,8 +203,10 @@ module GenomicMutation
 
 
   property :affected_genes => :array2single do
+    _mutated_isoforms = mutated_isoforms
+    mi_gene = Misc.process_to_hash(MutatedIsoform.setup(_mutated_isoforms.compact.flatten.uniq, organism)){|mis| mis.protein.gene}
     from_protein = mutated_isoforms.collect{|mis|
-      genes = mis.nil? ? [] : mis.protein.gene.compact
+      genes = mis.nil? ? [] : mi_gene.values_at(*mis).compact
       Gene.setup(genes.uniq, "Ensembl Gene ID", organism)
     }
     is_exon_junction = self.in_exon_junction?
@@ -217,13 +219,14 @@ module GenomicMutation
     end
     Gene.setup(from_protein, "Ensembl Gene ID", organism)
   end
+  persist :_ary_affected_genes
 
   property :damaged_genes => :array2single do |*args|
     _mutated_isoforms = mutated_isoforms
     mi_damaged = Misc.process_to_hash(MutatedIsoform.setup(_mutated_isoforms.compact.flatten.uniq, organism)){|mis| mis.damaged?(*args)}
-    from_protein = _mutated_isoforms.select{|mi| mi_damaged[mi]}.collect{|mis|
-      genes = mis.nil? ? [] : mis.protein.gene.compact
-      genes.concat self.genes if self.in_exon_junction?
+    mi_gene = Misc.process_to_hash(MutatedIsoform.setup(_mutated_isoforms.compact.flatten.uniq, organism)){|mis| mis.protein.gene}
+    from_protein = _mutated_isoforms.collect{|mis|
+      genes = mis.nil? ? [] : mi_gene.values_at(*mis.select{|mi| mi_damaged[mi]}).compact
       Gene.setup(genes.uniq, "Ensembl Gene ID", organism)
     }
     is_exon_junction = self.in_exon_junction?
@@ -236,6 +239,7 @@ module GenomicMutation
     end
     Gene.setup(from_protein, "Ensembl Gene ID", organism)
   end
+  persist :_ary_damaged_genes
 
   property :mutated_isoforms => :array2single do
     res = Sequence.job(:mutated_isoforms_for_genomic_mutations, jobname, :watson => watson, :organism => organism, :mutations => self.clean_annotations).run.chunked_values_at self
@@ -243,7 +247,7 @@ module GenomicMutation
     res.compact[0].annotate res if res.compact[0].respond_to? :annotate
     res
   end
-  persist :mutated_isoforms
+  persist :_ary_mutated_isoforms
 
   property :exon_junctions => :array do
     Sequence.job(:exon_junctions_at_genomic_positions, jobname, :organism => organism, :positions => self.clean_annotations).run.chunked_values_at(self)
@@ -283,7 +287,7 @@ module GenomicMutation
       }
     }.collect{|l| not l.nil? and not l.empty?}
   end
-  persist :in_exon_junction?
+  persist :_ary_in_exon_junction?
 
   property :over_range? => :array2single do |range|
     chromosome.zip(position).collect{|chr,pos| chr == gene_chromosome and range.include? pos}

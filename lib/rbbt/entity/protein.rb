@@ -82,12 +82,12 @@ module Protein
   property :sequence => :array2single do
     Protein.ensp2sequence(organism, self.ensembl)
   end
-  persist :sequence
+  persist :_ary_sequence
 
   property :sequence_length => :array2single do
     sequence.collect{|seq| seq.nil? ? nil : seq.length}
   end
-  persist :sequence_length
+  persist :_ary_sequence_length
 
   property :marked_svg => :single2array do |*args|
     positions = args.first

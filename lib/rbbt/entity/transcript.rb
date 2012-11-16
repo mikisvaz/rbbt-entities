@@ -59,7 +59,7 @@ module Transcript
   property :exons => :array2single do 
     Transcript.enst2ense(organism, self)
   end
-  persist :exons
+  persist :_ary_exons
 
   property :ensembl => :array2single do
     to "Ensembl Transcript ID"
