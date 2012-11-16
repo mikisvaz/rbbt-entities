@@ -210,9 +210,9 @@ module GenomicMutation
   end
 
   property :damaged_genes => :array2single do |*args|
-    mutated_isoforms = mutated_isoforms
-    mi_damaged = Misc.process_to_hash(mutated_isoforms.compact.flatten.uniq){|mis| mis.damaged?(*args)}
-    Gene.setup(mutated_isoforms.select{|mi| mi_damaged[mi]}.collect{|mis|
+    _mutated_isoforms = mutated_isoforms
+    mi_damaged = Misc.process_to_hash(_mutated_isoforms.compact.flatten.uniq){|mis| mis.damaged?(*args)}
+    Gene.setup(_mutated_isoforms.select{|mi| mi_damaged[mi]}.collect{|mis|
       genes = mis.nil? ? [] : mis.protein.gene
       Gene.setup(genes, "Ensembl Gene ID", organism)
     }, "Ensembl Gene ID", organism)
