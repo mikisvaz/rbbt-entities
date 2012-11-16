@@ -203,21 +203,38 @@ module GenomicMutation
 
 
   property :affected_genes => :array2single do
-    Gene.setup(mutated_isoforms.collect{|mis|
+    from_protein = mutated_isoforms.collect{|mis|
       genes = mis.nil? ? [] : mis.protein.gene.compact
-      genes.concat self.genes if self.in_exon_junction?
       Gene.setup(genes.uniq, "Ensembl Gene ID", organism)
-    }, "Ensembl Gene ID", organism)
+    }
+    is_exon_junction = self.in_exon_junction?
+    all_genes = self.genes
+    from_protein.each_with_index do |list, i|
+      if is_exon_junction[i] and all_genes[i]
+        list.concat all_genes[i] 
+        list.uniq!
+      end
+    end
+    Gene.setup(from_protein, "Ensembl Gene ID", organism)
   end
 
   property :damaged_genes => :array2single do |*args|
     _mutated_isoforms = mutated_isoforms
     mi_damaged = Misc.process_to_hash(MutatedIsoform.setup(_mutated_isoforms.compact.flatten.uniq, organism)){|mis| mis.damaged?(*args)}
-    Gene.setup(_mutated_isoforms.select{|mi| mi_damaged[mi]}.collect{|mis|
+    from_protein = _mutated_isoforms.select{|mi| mi_damaged[mi]}.collect{|mis|
       genes = mis.nil? ? [] : mis.protein.gene.compact
       genes.concat self.genes if self.in_exon_junction?
       Gene.setup(genes.uniq, "Ensembl Gene ID", organism)
-    }, "Ensembl Gene ID", organism)
+    }
+    is_exon_junction = self.in_exon_junction?
+    all_genes = self.genes
+    from_protein.each_with_index do |list, i|
+      if is_exon_junction[i] and all_genes[i]
+        list.concat all_genes[i] 
+        list.uniq!
+      end
+    end
+    Gene.setup(from_protein, "Ensembl Gene ID", organism)
   end
 
   property :mutated_isoforms => :array2single do

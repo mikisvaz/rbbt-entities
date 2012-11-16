@@ -62,7 +62,9 @@ class TestGenomicMutation < Test::Unit::TestCase
     assert MUTATION.coding?
     ddd NON_CODING_MUTATION.affected_exons
     assert(!NON_CODING_MUTATION.coding?)
+    ddd SPLICING.affected_genes
   end
+
 
 end
 
