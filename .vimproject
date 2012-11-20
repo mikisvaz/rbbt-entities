@@ -3,6 +3,7 @@ rbbt-entities=/$PWD filter="*.rb *.rake Rakefile *.rdoc *.R *.sh *.js *.haml *.s
  bin=bin {
   vcf2rbbt.rb
   icgc2rbbt.rb
+  tcga_icgc2rbbt.rb
  }
  lib=lib {
   rbbt=rbbt{
