@@ -5,6 +5,7 @@ require 'rbbt/mutation/mutation_assessor'
 require 'rbbt/entity/protein'
 require 'rbbt/entity/gene'
 require 'rbbt/entity/mutated_isoform'
+require 'rbbt/sources/genomes1000'
 
 Workflow.require_workflow "Sequence"
 
@@ -48,6 +49,11 @@ module GenomicMutation
     @@transcript_for_exon_indices[organism] ||= Organism.transcript_exons(organism).tsv :persist => true, :type => :flat, :key_field => "Ensembl Exon ID", :fields => ["Ensembl Transcript ID"], :unnamed => true
   end
 
+  def self.genomes_1000_index(organism)
+    build = Organism.hg_build(organism)
+    @@genomes_1000_index ||= {}
+    @@genomes_1000_index[build] ||= Genomes1000[build == "hg19" ? "mutations" : "mutations_hg18"].tsv :key_field => "Genomic Mutation", :unnamed => true, :fields => ["Variant ID"], :type => :single, :persist => true
+  end
 
   property :bases_in_range => :single2array do |range|
     start = range.begin+position-1
@@ -56,6 +62,11 @@ module GenomicMutation
       f.seek start
       f.read eend
     end
+  end
+
+  property :genomes_1000 => :array2single do
+    index ||= GenomicMutation.genomes_1000_index(organism)
+    index.chunked_values_at self
   end
 
   property :ensembl_browser => :single2array do
