@@ -232,6 +232,10 @@ module GenomicMutation
   end
   persist :_ary_affected_genes
 
+  property :relevant? => :array2single do
+    affected_genes.collect{|list| list and list.any?}
+  end
+
   property :damaged_genes => :array2single do |*args|
     _mutated_isoforms = mutated_isoforms
     mi_damaged = Misc.process_to_hash(MutatedIsoform.setup(_mutated_isoforms.compact.flatten.uniq, organism)){|mis| mis.damaged?(*args)}
