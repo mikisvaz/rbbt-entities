@@ -66,7 +66,7 @@ module GenomicMutation
 
   property :genomes_1000 => :array2single do
     index ||= GenomicMutation.genomes_1000_index(organism)
-    index.chunked_values_at self
+    index.chunked_values_at self.collect{|m| m.split(":")[0..2] * ":" }
   end
 
   property :ensembl_browser => :single2array do
@@ -211,26 +211,6 @@ module GenomicMutation
     Gene.setup(genes, "Ensembl Gene ID", organism)
   end
   persist :genes
-
-
-  #property :affected_genes => :array2single do
-  #  _mutated_isoforms = mutated_isoforms
-  #  mi_gene = Misc.process_to_hash(MutatedIsoform.setup(_mutated_isoforms.compact.flatten.uniq, organism)){|mis| mis.protein.gene}
-  #  from_protein = mutated_isoforms.collect{|mis|
-  #    genes = mis.nil? ? [] : mi_gene.values_at(*mis).compact
-  #    Gene.setup(genes.uniq, "Ensembl Gene ID", organism)
-  #  }
-  #  is_exon_junction = self.in_exon_junction?
-  #  all_genes = self.genes
-  #  from_protein.each_with_index do |list, i|
-  #    if is_exon_junction[i] and all_genes[i]
-  #      list.concat all_genes[i] 
-  #      list.uniq!
-  #    end
-  #  end
-  #  Gene.setup(from_protein, "Ensembl Gene ID", organism)
-  #end
-  #persist :_ary_affected_genes
 
   property :affected_genes => :array2single do
     _mutated_isoforms = mutated_isoforms
