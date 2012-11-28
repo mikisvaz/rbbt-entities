@@ -213,6 +213,25 @@ module GenomicMutation
   persist :genes
 
 
+  #property :affected_genes => :array2single do
+  #  _mutated_isoforms = mutated_isoforms
+  #  mi_gene = Misc.process_to_hash(MutatedIsoform.setup(_mutated_isoforms.compact.flatten.uniq, organism)){|mis| mis.protein.gene}
+  #  from_protein = mutated_isoforms.collect{|mis|
+  #    genes = mis.nil? ? [] : mi_gene.values_at(*mis).compact
+  #    Gene.setup(genes.uniq, "Ensembl Gene ID", organism)
+  #  }
+  #  is_exon_junction = self.in_exon_junction?
+  #  all_genes = self.genes
+  #  from_protein.each_with_index do |list, i|
+  #    if is_exon_junction[i] and all_genes[i]
+  #      list.concat all_genes[i] 
+  #      list.uniq!
+  #    end
+  #  end
+  #  Gene.setup(from_protein, "Ensembl Gene ID", organism)
+  #end
+  #persist :_ary_affected_genes
+
   property :affected_genes => :array2single do
     _mutated_isoforms = mutated_isoforms
     mi_gene = Misc.process_to_hash(MutatedIsoform.setup(_mutated_isoforms.compact.flatten.uniq, organism)){|mis| mis.protein.gene}
@@ -221,16 +240,17 @@ module GenomicMutation
       Gene.setup(genes.uniq, "Ensembl Gene ID", organism)
     }
     is_exon_junction = self.in_exon_junction?
-    all_genes = self.genes
+    genes_with_altered_splicing = self.transcripts_with_affected_splicing.collect{|transcripts| transcripts.gene}
     from_protein.each_with_index do |list, i|
-      if is_exon_junction[i] and all_genes[i]
-        list.concat all_genes[i] 
+      if is_exon_junction[i] and genes_with_altered_splicing[i]
+        list.concat genes_with_altered_splicing[i] 
         list.uniq!
       end
     end
     Gene.setup(from_protein, "Ensembl Gene ID", organism)
   end
   persist :_ary_affected_genes
+
 
   property :relevant? => :array2single do
     affected_genes.collect{|list| list and list.any?}
@@ -327,6 +347,29 @@ module GenomicMutation
     Sequence.job(:exons_at_genomic_positions, jobname, :organism => organism, :positions => self.clean_annotations).run.chunked_values_at self
   end
   persist :affected_exons
+
+  property :transcripts_with_affected_splicing  => :array2single do
+    exon2transcript_index = GenomicMutation.transcripts_for_exon_index(organism)
+    transcripts = exon_junctions.collect{|junctions|
+      exons = junctions.nil? ? [] : junctions.collect{|exon_junction| exon_junction.split(":").first }
+      exons.empty? ? 
+        [] : exon2transcript_index.chunked_values_at(exons).flatten
+    }
+    Transcript.setup(transcripts, "Ensembl Transcript ID", organism)
+  end
+  persist :transcripts_with_affected_splicing
+
+  property :affected_transcripts  => :array2single do
+    exon2transcript_index = GenomicMutation.transcripts_for_exon_index(organism)
+    transcripts = affected_exons.collect{|exons|
+      exons = [] if exons.nil?
+      exons.empty? ? 
+        [] : exon2transcript_index.chunked_values_at(exons).flatten
+    }
+    Transcript.setup(transcripts, "Ensembl Transcript ID", organism)
+  end
+  persist :affected_transcripts
+
 
   property :coding? => :array2single do
     Sequence.job(:exons_at_genomic_positions, jobname, :organism => organism, :positions => self.clean_annotations).run.
