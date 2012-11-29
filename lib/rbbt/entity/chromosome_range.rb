@@ -40,20 +40,34 @@ module ChromosomeRange
     Sequence.job(:genes_at_genomic_ranges, "ChromosomeRange", :organism => organism, :ranges => self.unit).run.tap{|t| t.namespace = organism}.values_at *self.unit
   end
 
-  property :chromosome => :array2single do
-    self.collect{|r| r.split(":")[0] }
-  end
-
-  property :start => :array2single do
-    unit.collect{|r| r.split(":")[1] }
-  end
-
-  property :eend => :array2single do
-    unit.collect{|r| r.split(":")[2] }
-  end
-
   property :ensembl_browser => :single2array do
     "http://#{Misc.ensembl_server(self.organism)}/Homo_sapiens/Location/View?db=core&r=#{chromosome}:#{start}-#{eend}"
   end
  
+  property :chromosome => :array2single do
+    self.clean_annotations.collect{|r| r.split(":")[0]}
+  end
+  persist :_ary_chromosome
+
+  property :start => :array2single do
+    self.clean_annotations.collect{|r| r.split(":")[1].to_i}
+  end
+  persist :_ary_start
+
+  property :eend => :array2single do
+    self.clean_annotations.collect{|r| r.split(":")[2].to_i}
+  end
+  persist :_ary_eend
+
+  property :end => :array2single do
+    self.eend
+  end
+  persist :_ary_end
+
+  property :range => :array2single do
+    start.zip(self.end).collect{|s,e| (s..e)}
+  end
+  persist :_ary_range
+
+
 end
