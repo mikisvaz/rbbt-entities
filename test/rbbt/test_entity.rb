@@ -1,4 +1,5 @@
 require File.expand_path(File.dirname(__FILE__) + '/../test_helper')
+require 'rbbt'
 require 'rbbt/entity'
 require 'rbbt/util/tmpfile'
 require 'test/unit'
@@ -53,7 +54,7 @@ end
 
 class TestEntity < Test::Unit::TestCase
 
-  def test_property_ary
+  def _test_property_ary
     a = ["String1", "String2"]
     a.extend ReversableString
 
@@ -73,7 +74,7 @@ class TestEntity < Test::Unit::TestCase
     end
   end
 
-  def test_property_single
+  def _test_property_single
     a = ["String1", "String2"]
     a.extend ReversableString
 
@@ -85,7 +86,7 @@ class TestEntity < Test::Unit::TestCase
     assert_equal 3, $count
   end
 
-  def test_property_ary_p
+  def _test_property_ary_p
     a = ["String1", "String2"]
     a.extend ReversableString
 
@@ -96,7 +97,7 @@ class TestEntity < Test::Unit::TestCase
     assert_equal 1, $count
   end
 
-  def test_property_single_p
+  def _test_property_single_p
     a = ["String1", "String2"]
     a.extend ReversableString
 
@@ -108,7 +109,7 @@ class TestEntity < Test::Unit::TestCase
     assert_equal 2, $count
   end
 
-  def test_property_ary_p_array
+  def _test_property_ary_p_array
     a = ["String1", "String2"]
     a.extend ReversableString
 
@@ -120,7 +121,7 @@ class TestEntity < Test::Unit::TestCase
     assert_equal 1, $count
   end
 
-  def test_unpersist
+  def _test_unpersist
     a = ["String1", "String2"]
     a.extend ReversableString
 
@@ -149,10 +150,47 @@ class TestEntity < Test::Unit::TestCase
 
   end
 
-  def test_persist_annotations
+  def _test_persist_annotations
     string = 'aaabbbccc'
     ReversableString.setup(string)
     assert_equal string.length, string.annotation_list.length
     assert_equal string.length, string.annotation_list.length
+  end
+
+  def __test_performance
+
+    require 'rbbt/workflow'
+    Workflow.require_workflow "StudyExplorer"
+
+    s = Study.setup("CLL")
+    mutations = s.cohort.metagenotype
+    Misc.profile_html(:min_percent => 1) do
+      mutated_isoforms = mutations.each{|m| m.genes.each{|g| g}}
+    end
+  end
+
+  def test_clean_annotations
+    require 'rbbt/workflow'
+    Workflow.require_workflow "StudyExplorer"
+
+    s = Study.setup("CLL")
+    mutations = s.cohort.metagenotype.mutated_isoforms
+
+    Misc.benchmark(100) do
+      mutations.each{|m| m}
+    end
+
+    Misc.benchmark(100) do
+      mutations.clean_annotations.each{|m| m}
+    end
+
+    m = mutations.first
+
+    assert_equal m.split(":")[1], m.position.to_s
+    assert_raise NoMethodError do 
+      m.clean_annotations.position
+    end
+
+
   end
 end

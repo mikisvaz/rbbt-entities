@@ -14,8 +14,10 @@ module Entity
   def self.extended(base)
     base.extend Annotation unless Annotation === base
 
+
     Entity.formats[base.to_s] = base
     base.module_eval do
+      attr_accessor :_ary_property_cache
 
       if not methods.include? "prev_entity_extended"
         class << self
@@ -26,14 +28,6 @@ module Entity
         def self.extended(data)
           prev_entity_extended(data)
 
-          class << data
-            attr_accessor :_ary_property_cache
-
-            def clear_ary_property_cache
-              _ary_property_cache.clear
-            end
-          end
-
           data._ary_property_cache = {}
 
           if Array === data and 
@@ -42,6 +36,7 @@ module Entity
 
             data.extend AnnotatedArray
           end
+
           data
         end
       end
@@ -53,7 +48,9 @@ module Entity
         end
       end
 
-      def clean_annotations
+      def clean_annotations_old
+        return nil if self.nil?
+        return self.dup
         case
         when self.nil?
           nil
@@ -72,8 +69,21 @@ module Entity
         end
       end
 
+      def clean_annotations
+        case
+        when self.nil?
+          nil
+        when Array === self
+          self.dup.collect{|e| e.respond_to?(:clean_annotations)? e.clean_annotations : e}
+        when String === self
+          "" << self
+        else
+          self.dup
+        end
+      end
+
       def to_yaml(*args)
-        clean_annotations.to_yaml(*args)
+        self.clean_annotations.dup.to_yaml(*args)
       end
 
       def encode_with(coder)
@@ -107,7 +117,7 @@ module Entity
 
         name = name.to_s unless String === name
 
-        persisted_name = UNPERSISTED_PREFIX + name.to_s
+        persisted_name = UNPERSISTED_PREFIX + name
         self.remove_method persisted_name if methods.include? persisted_name
 
         case type
@@ -127,9 +137,9 @@ module Entity
         when :array, :array2single
           ary_name = "_ary_" << name
           define_method ary_name, &block 
-
+          
           define_method name do |*args|
-            ary_name = "_ary_" << __method__.to_s
+            #ary_name = "_ary_" << __method__.to_s
             case
             when Array === self
               self.send(ary_name, *args)

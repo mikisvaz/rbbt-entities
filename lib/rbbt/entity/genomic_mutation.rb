@@ -24,7 +24,7 @@ module GenomicMutation
       @watson = Sequence.job(:is_watson, jobname, :mutations => [self.clean_annotations], :organism => organism).run
     end
   end
-  persist :guess_watson
+  #persist :guess_watson
 
   def watson
     if @watson.nil? and Array === self
@@ -72,27 +72,27 @@ module GenomicMutation
   property :ensembl_browser => :single2array do
     "http://#{Misc.ensembl_server(self.organism)}/Homo_sapiens/Location/View?db=core&r=#{chromosome}:#{position - 100}-#{position + 100}"
   end
-  persist :ensembl_browser
+  #persist :ensembl_browser
 
   property :chromosome => :array2single do
     self.clean_annotations.collect{|mut| mut.split(":")[0]}
   end
-  persist :_ary_chromosome
+  #persist :_ary_chromosome
 
   property :position => :array2single do
     self.clean_annotations.collect{|mut| mut.split(":")[1].to_i}
   end
-  persist :_ary_position
+  #persist :_ary_position
 
   property :base => :array2single do
     self.clean_annotations.collect{|mut| mut.split(":")[2]}
   end
-  persist :_ary_base
+  #persist :_ary_base
 
   property :reference => :array2single do
     Sequence.reference_allele_at_chr_positions(organism, chromosome, position)
   end
-  persist :_ary_reference
+  #persist :_ary_reference
 
   property :gene_strand_reference => :array2single do
     genes = self.genes
@@ -102,7 +102,7 @@ module GenomicMutation
       reverse ? Misc::BASE2COMPLEMENT[reference] : reference
     }
   end
-  persist :_ary_gene_strand_reference
+  #persist :_ary_gene_strand_reference
 
   # DID NOT TRY THIS. Its supposed to deal with ambiguous gene overlaps by
   # taking the first coding gene, if any
@@ -127,23 +127,23 @@ module GenomicMutation
   #    end
   #  }
   #end
-  #persist :_ary_gene_strand_reference
+  ##persist :_ary_gene_strand_reference
 
 
   property :score => :array2single do
     self.clean_annotations.collect{|mut| mut.split(":")[3].to_f}
   end
-  persist :_ary_score
+  #persist :_ary_score
 
   property :remove_score => :array2single do
     self.annotate(self.collect{|mut| mut.split(":")[0..2] * ":"})
   end
-  persist :remove_score
+  #persist :remove_score
 
   property :noscore => :single2array do
     self.annotate self.clean_annotations.collect{|mut| mut.split(":")[0..2]}
   end
-  persist :noscore
+  #persist :noscore
 
   property :to_watson => :array2single do
     if watson
@@ -154,13 +154,13 @@ module GenomicMutation
       result
     end
   end
-  persist :to_watson
+  #persist :to_watson
 
   property :reference => :array2single do
     tsv = Sequence.job(:reference_allele_at_genomic_positions, jobname, :positions => self.clean_annotations, :organism => organism, :unnamed => true).run
     tsv.chunked_values_at self
   end
-  persist :reference
+  #persist :reference
 
   property :type => :array2single do
     reference = watson ? self.reference : self.gene_strand_reference
@@ -191,7 +191,7 @@ module GenomicMutation
     end
 
   end
-  persist :type
+  #persist :type
 
   property :offset_in_genes => :array2single do
     gene2chr_start = Misc.process_to_hash(genes.flatten){|list| list.chr_start}
@@ -202,15 +202,16 @@ module GenomicMutation
       }.compact
     }
   end
-  persist :offset_in_genes
+  #persist :offset_in_genes
 
   property :genes => :array2single do
     genes_tsv = Sequence.job(:genes_at_genomic_positions, jobname, :organism => organism, :positions => self.clean_annotations).run
     genes_tsv.unnamed = true
+    genes = nil
     genes = genes_tsv.chunked_values_at self
     Gene.setup(genes, "Ensembl Gene ID", organism)
   end
-  persist :genes
+  #persist :_ary_genes
 
   property :affected_genes => :array2single do
     _mutated_isoforms = mutated_isoforms
@@ -229,7 +230,7 @@ module GenomicMutation
     end
     Gene.setup(from_protein, "Ensembl Gene ID", organism)
   end
-  persist :_ary_affected_genes
+  #persist :_ary_affected_genes
 
 
   property :relevant? => :array2single do
@@ -254,7 +255,7 @@ module GenomicMutation
     end
     Gene.setup(from_protein, "Ensembl Gene ID", organism)
   end
-  persist :_ary_damaged_genes
+  #persist :_ary_damaged_genes
 
   property :mutated_isoforms => :array2single do
     res = Sequence.job(:mutated_isoforms_for_genomic_mutations, jobname, :watson => watson, :organism => organism, :mutations => self.clean_annotations).run.chunked_values_at self
@@ -262,12 +263,12 @@ module GenomicMutation
     res.compact[0].annotate res if res.compact[0].respond_to? :annotate
     res
   end
-  persist :_ary_mutated_isoforms
+  #persist :_ary_mutated_isoforms
 
   property :exon_junctions => :array do
     Sequence.job(:exon_junctions_at_genomic_positions, jobname, :organism => organism, :positions => self.clean_annotations).run.chunked_values_at(self)
   end
-  persist :exon_junctions
+  #persist :exon_junctions
 
   property :in_exon_junction? => :array2single do
     exon_position_index ||= GenomicMutation.exon_position_index(organism)
@@ -302,12 +303,12 @@ module GenomicMutation
       }
     }.collect{|l| not l.nil? and not l.empty?}
   end
-  persist :_ary_in_exon_junction?
+  #persist :_ary_in_exon_junction?
 
   property :over_range? => :array2single do |range|
     chromosome.zip(position).collect{|chr,pos| chr == gene_chromosome and range.include? pos}
   end
-  persist :_ary_over_range?
+  #persist :_ary_over_range?
 
   property :over_gene? => :array2single do |gene|
     gene = Gene.setup(gene.dup, "Ensembl Gene ID", organism) unless Gene === gene
@@ -321,12 +322,12 @@ module GenomicMutation
       chromosome.zip(position).collect{|chr,pos| chr == gene_chromosome and gene_range.include? pos}
     end
   end
-  persist :_ary_over_gene?
+  #persist :_ary_over_gene?
 
   property :affected_exons  => :array2single do
     Sequence.job(:exons_at_genomic_positions, jobname, :organism => organism, :positions => self.clean_annotations).run.chunked_values_at self
   end
-  persist :affected_exons
+  #persist :affected_exons
 
   property :transcripts_with_affected_splicing  => :array2single do
     exon2transcript_index = GenomicMutation.transcripts_for_exon_index(organism)
@@ -337,7 +338,7 @@ module GenomicMutation
     }
     Transcript.setup(transcripts, "Ensembl Transcript ID", organism)
   end
-  persist :transcripts_with_affected_splicing
+  #persist :transcripts_with_affected_splicing
 
   property :affected_transcripts  => :array2single do
     exon2transcript_index = GenomicMutation.transcripts_for_exon_index(organism)
@@ -348,7 +349,7 @@ module GenomicMutation
     }
     Transcript.setup(transcripts, "Ensembl Transcript ID", organism)
   end
-  persist :affected_transcripts
+  #persist :affected_transcripts
 
 
   property :coding? => :array2single do
@@ -367,7 +368,7 @@ module GenomicMutation
       (Array === mis and (damaged_mutated_isoforms & mis).any?)
     end
   end
-  persist :damaging?
+  #persist :damaging?
 
   property :worst_consequence => :array2single do
     all_mutated_isoforms = mutated_isoforms.compact.flatten
