@@ -213,6 +213,8 @@ module MutatedIsoform
           polyphen_scores
         when :snps_and_go
           snps_and_go_scores
+        when :transFIC
+          transFIC_scores(:mutation_assessor)
         else
           raise "Unknown predictive method: #{ method }"
         end
@@ -250,7 +252,7 @@ module MutatedIsoform
   property :snps_and_go_scores => :array2single do
     begin
       missense = self.select{|mutation| mutation.consequence == "MISS-SENSE"}
-      res = MutEval.job(:snps_and_go, "MutatedIsoform", :mutations => missense.sort, :organism => organism).run
+      res = MutEval.job(:snps_and_go, "MutatedIsoforms (#{self.length})", :mutations => missense.sort, :organism => organism).run
       res.values_at(*self).collect{|v| (v.nil? or v["SNPSandGO Score"].nil? or v["SNPSandGO Score"].empty?) ? 
         nil : 
         (v["SNPSandGO Prediction"] == "Disease" ? 1.0 - (10.0 - v["SNPSandGO Score"].to_f) / 20 : 0 + (10.0 - v["SNPSandGO Score"].to_f) / 20)
@@ -264,7 +266,7 @@ module MutatedIsoform
   property :polyphen_scores => :array2single do
     begin
       missense = self.select{|mutation| mutation.consequence == "MISS-SENSE"}
-      res = MutEval.job(:polyphen, "MutatedIsoform", :mutations => missense.sort, :organism => organism).run
+      res = MutEval.job(:polyphen, "MutatedIsoforms (#{self.length})", :mutations => missense.sort, :organism => organism).run
       res.values_at(*self).collect{|v| (v.nil? or v["Polyphen Score"].nil? or v["Polyphen Score"].empty?) ? nil : v["Polyphen Score"].to_f / 10}
     rescue
       Log.warn $!.message
@@ -275,8 +277,29 @@ module MutatedIsoform
   property :sift_scores => :array2single do
     begin
       missense = self.select{|mutation| mutation.consequence == "MISS-SENSE"}
-      res = MutEval.job(:sift, "MutatedIsoform", :mutations => missense.sort, :organism => organism).run
+      res = MutEval.job(:sift, "MutatedIsoforms (#{self.length})", :mutations => missense.sort, :organism => organism).run
       res.values_at(*self).collect{|v| (v.nil? or v["SIFT Score"].nil? or v["SIFT Score"].empty?) ? nil : 1.0 - v["SIFT Score"].to_f}
+    rescue
+      Log.warn $!.message
+      [nil] * self.length
+    end
+  end
+
+  property :transFIC_scores => :array2single do |*args|
+    method = args.first || :mutation_assessor
+    range = {nil => nil,
+      ""  => nil,
+      "low_impact" => 0,
+      "medium_impact" => 0.7,
+      "high_impact" => 1.0}
+    field_names = {
+    }
+    begin
+      missense = self.select{|mutation| mutation.consequence == "MISS-SENSE"}
+      field_name = {
+        :mutation_assessor => "maTransfic",
+      }
+      MutEval.job(:transFIC, "MutatedIsoforms (#{self.length})", :mutations => missense.sort, :organism => organism).run.values_at(*self).collect{|v| (v.nil? or v[field_name].nil? or v[field_name].empty?) ? nil : range[v[field_name]]}
     rescue
       Log.warn $!.message
       [nil] * self.length
@@ -293,7 +316,7 @@ module MutatedIsoform
 
     begin
       missense = self.select{|mutation| mutation.consequence == "MISS-SENSE"}
-      MutEval.job(:mutation_assessor, "MutatedIsoform", :mutations => missense.sort, :organism => organism).run.values_at(*self).collect{|v| (v.nil? or v["Mutation Assessor Prediction"].nil? or v["Mutation Assessor Prediction"].empty?) ? nil : range[v["Mutation Assessor Prediction"]]}
+      MutEval.job(:mutation_assessor, "MutatedIsoforms (#{self.length})", :mutations => missense.sort, :organism => organism).run.values_at(*self).collect{|v| (v.nil? or v["Mutation Assessor Prediction"].nil? or v["Mutation Assessor Prediction"].empty?) ? nil : range[v["Mutation Assessor Prediction"]]}
     rescue
       Log.warn $!.message
       [nil] * self.length
