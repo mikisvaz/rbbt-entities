@@ -296,9 +296,11 @@ module MutatedIsoform
     }
     begin
       missense = self.select{|mutation| mutation.consequence == "MISS-SENSE"}
+
       field_name = {
         :mutation_assessor => "maTransfic",
-      }
+      }[method.to_sym]
+
       MutEval.job(:transFIC, "MutatedIsoforms (#{self.length})", :mutations => missense.sort, :organism => organism).run.values_at(*self).collect{|v| (v.nil? or v[field_name].nil? or v[field_name].empty?) ? nil : range[v[field_name]]}
     rescue
       Log.warn $!.message

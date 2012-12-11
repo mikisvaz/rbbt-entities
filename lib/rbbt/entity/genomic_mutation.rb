@@ -220,7 +220,7 @@ module GenomicMutation
       genes = mis.nil? ? [] : mi_gene.values_at(*mis).compact
       Gene.setup(genes.uniq, "Ensembl Gene ID", organism)
     }
-    is_exon_junction = self.in_exon_junction?.zip(self.type){|in_ex,type| in_ex and type != "none"}
+    is_exon_junction = self.in_exon_junction?.zip(self.type).collect{|in_ex,type| in_ex and type != "none"}
     genes_with_altered_splicing = self.transcripts_with_affected_splicing.collect{|transcripts| transcripts.gene}
     from_protein.each_with_index do |list, i|
       if is_exon_junction[i] and genes_with_altered_splicing[i]
@@ -245,7 +245,7 @@ module GenomicMutation
       genes = mis.nil? ? [] : mi_gene.values_at(*mis.select{|mi| mi_damaged[mi]}).compact
       Gene.setup(genes.uniq, "Ensembl Gene ID", organism)
     }
-    is_exon_junction = self.in_exon_junction?.zip(self.type){|in_ex,type| in_ex and type != "none"}
+    is_exon_junction = self.in_exon_junction?.zip(self.type).collect{|in_ex,type| in_ex and type != "none"}
     all_genes = self.genes
     from_protein.each_with_index do |list, i|
       if is_exon_junction[i] and all_genes[i]
