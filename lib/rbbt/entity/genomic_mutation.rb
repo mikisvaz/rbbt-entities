@@ -6,6 +6,7 @@ require 'rbbt/entity/protein'
 require 'rbbt/entity/gene'
 require 'rbbt/entity/mutated_isoform'
 require 'rbbt/sources/genomes1000'
+require 'rbbt/sources/COSMIC'
 
 Workflow.require_workflow "Sequence"
 
@@ -55,6 +56,18 @@ module GenomicMutation
     @@genomes_1000_index[build] ||= Genomes1000[build == "hg19" ? "mutations" : "mutations_hg18"].tsv :key_field => "Genomic Mutation", :unnamed => true, :fields => ["Variant ID"], :type => :single, :persist => true
   end
 
+  def self.COSMIC_index(organism)
+    build = Organism.hg_build(organism)
+    field = {
+      "hg19" => "Mutation GRCh37 genome position",
+      "hg18" => "Mutation NCBI36 genome position",
+    
+    }[build]
+    @@COSMIC_index ||= {}
+    @@COSMIC_index[build] ||= COSMIC.Mutations.tsv :key_field => field, :unnamed => true, :fields => ["Mutation ID"], :type => :single, :persist => true
+  end
+
+
   property :bases_in_range => :single2array do |range|
     start = range.begin+position-1
     eend = range.end - range.begin + 1
@@ -67,6 +80,11 @@ module GenomicMutation
   property :genomes_1000 => :array2single do
     index ||= GenomicMutation.genomes_1000_index(organism)
     index.chunked_values_at self.collect{|m| m.split(":")[0..2] * ":" }
+  end
+
+  property :COSMIC => :array2single do
+    index ||= GenomicMutation.COSMIC_index(organism)
+    index.chunked_values_at self.collect{|m| m.split(":").values_at(0,1,1) * ":" }
   end
 
   property :ensembl_browser => :single2array do
