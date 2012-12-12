@@ -301,7 +301,7 @@ module MutatedIsoform
         :mutation_assessor => "maTransfic",
       }[method.to_sym]
 
-      MutEval.job(:transFIC, "MutatedIsoforms (#{self.length})", :mutations => missense.sort, :organism => organism).run.values_at(*self).collect{|v| (v.nil? or v[field_name].nil? or v[field_name].empty?) ? nil : range[v[field_name]]}
+      MutEval.job(:transFIC, "MutatedIsoforms (#{self.length})", :mutations => missense.sort, :organism => organism).run.values_at(*self).collect{|v| (v.nil? or v[field_name].nil? or v[field_name].empty?) ? nil : v[field_name].to_f}
     rescue
       Log.warn $!.message
       [nil] * self.length

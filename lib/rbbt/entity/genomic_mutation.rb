@@ -88,7 +88,6 @@ module GenomicMutation
 
   end
 
-
   property :bases_in_range => :single2array do |range|
     start = range.begin+position-1
     eend = range.end - range.begin + 1
@@ -426,9 +425,9 @@ module GenomicMutation
     truncated_mutated_isoforms = all_mutated_isoforms.select{|mi| mi.truncated}
     damage_scores = Misc.process_to_hash(non_synonymous_mutated_isoforms){|mis| mis.any? ? mis.damage_scores : []}
     damaged = all_mutated_isoforms.select{|mi| mi.damaged? }
-    in_exon_junction?.zip(mutated_isoforms).collect{|ej,mis|
+    in_exon_junction?.zip(mutated_isoforms, type).collect{|ej,mis,type|
       case
-      when (mis.nil? or mis.subset(non_synonymous_mutated_isoforms).empty? and ej)
+      when (mis.nil? or mis.subset(non_synonymous_mutated_isoforms).empty? and ej and not type == 'none')
         "In Exon Junction"
       when (Array === mis and mis.subset(truncated_mutated_isoforms).any?)
         mis.subset(truncated_mutated_isoforms).first
