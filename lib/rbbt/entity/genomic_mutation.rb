@@ -1,12 +1,16 @@
-require 'rbbt/entity'
 require 'rbbt/workflow'
-require 'rbbt/sources/organism'
-require 'rbbt/mutation/mutation_assessor'
+
+require 'rbbt/entity'
 require 'rbbt/entity/protein'
 require 'rbbt/entity/gene'
 require 'rbbt/entity/mutated_isoform'
+
+require 'rbbt/sources/organism'
 require 'rbbt/sources/genomes1000'
 require 'rbbt/sources/COSMIC'
+require 'rbbt/sources/dbSNP'
+
+require 'rbbt/mutation/mutation_assessor'
 
 Workflow.require_workflow "Sequence"
 
@@ -67,6 +71,23 @@ module GenomicMutation
     @@COSMIC_index[build] ||= COSMIC.Mutations.tsv :key_field => field, :unnamed => true, :fields => ["Mutation ID"], :type => :single, :persist => true
   end
 
+  def self.dbSNP_index(organism)
+    build = Organism.hg_build(organism)
+    @@dbSNP_index ||= {}
+    @@dbSNP_index[build] ||= DbSNP[build == "hg19" ? "mutations" : "mutations_hg18"].tsv :key_field => "Genomic Mutation", :unnamed => true,  :type => :single, :persist => true
+  end
+
+  def self.dbSNP_position_index(organism)
+    build = Organism.hg_build(organism)
+
+    @@dbSNP_position_index ||= {}
+
+    @@dbSNP_position_index[build] ||= TSV.open(
+      CMD::cmd('sed "s/\([[:alnum:]]\+\):\([[:digit:]]\+\):\([ACTG+-]\+\)/\1:\2/" ', :in => DbSNP[build == "hg19" ? "mutations" : "mutations_hg18"].open, :pipe => true), 
+      :key_field => "Genomic Mutation", :unnamed => true,  :type => :single, :persist => true)
+
+  end
+
 
   property :bases_in_range => :single2array do |range|
     start = range.begin+position-1
@@ -75,6 +96,17 @@ module GenomicMutation
       f.seek start
       f.read eend
     end
+  end
+
+  property :dbSNP_position => :array2single do
+    index ||= GenomicMutation.dbSNP_position_index(organism)
+    index.chunked_values_at self.collect{|m| m.split(":")[0..1] * ":" }
+  end
+
+
+  property :dbSNP => :array2single do
+    index ||= GenomicMutation.dbSNP_index(organism)
+    index.chunked_values_at self.collect{|m| m.split(":")[0..2] * ":" }
   end
 
   property :genomes_1000 => :array2single do
@@ -114,7 +146,7 @@ module GenomicMutation
 
   property :gene_strand_reference => :array2single do
     genes = self.genes
-    gene_strand = Misc.process_to_hash(genes.compact.flatten){|list| list.strand }
+    gene_strand = Misc.process_to_hash(genes.compact.flatten){|list| list.any? ? list.strand : []}
     reverse = genes.collect{|list| not list.nil? and list.select{|gene| gene_strand[gene].to_s == "-1" }.any? }
     reference.zip(reverse).collect{|reference,reverse|
       reverse ? Misc::BASE2COMPLEMENT[reference] : reference
