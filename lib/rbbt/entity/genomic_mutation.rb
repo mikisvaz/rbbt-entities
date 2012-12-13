@@ -294,14 +294,17 @@ module GenomicMutation
       genes = mis.nil? ? [] : mi_gene.values_at(*mis.select{|mi| mi_damaged[mi]}).compact
       Gene.setup(genes.uniq, "Ensembl Gene ID", organism)
     }
-    is_exon_junction = self.in_exon_junction?.zip(self.type).collect{|in_ex,type| in_ex and type != "none"}
-    all_genes = self.genes
+
+    ej_transcripts =  transcripts_with_affected_splicing
+    _type = self.type
+
     from_protein.each_with_index do |list, i|
-      if is_exon_junction[i] and all_genes[i]
-        list.concat all_genes[i] 
+      if ej_transcripts[i] and ej_transcripts[i].any? and _type[i] != 'none'
+        list.concat ej_transcripts[i].gene
         list.uniq!
       end
     end
+
     Gene.setup(from_protein, "Ensembl Gene ID", organism)
   end
   #persist :_ary_damaged_genes
