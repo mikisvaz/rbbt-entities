@@ -20,6 +20,8 @@ module GenomicMutation
   self.annotation :organism
   self.annotation :watson
 
+  self.masked_annotations = [:jobname]
+
   self.format = "Genomic Mutation"
 
   property :guess_watson => :array do
@@ -147,8 +149,16 @@ module GenomicMutation
     genes = self.genes
     gene_strand = Misc.process_to_hash(genes.compact.flatten){|list| list.any? ? list.strand : []}
     reverse = genes.collect{|list| not list.nil? and list.select{|gene| gene_strand[gene].to_s == "-1" }.any? }
-    reference.zip(reverse).collect{|reference,reverse|
-      reverse ? Misc::BASE2COMPLEMENT[reference] : reference
+    forward = genes.collect{|list| not list.nil? and list.select{|gene| gene_strand[gene].to_s == "1" }.any? }
+    reference.zip(reverse, forward, base).collect{|reference,reverse, forward, base|
+      case
+      when (reverse and not forward)
+        Misc::BASE2COMPLEMENT[reference]
+      when (forward and not reverse)
+        reference
+      else
+        base == reference ? Misc::BASE2COMPLEMENT[reference] : reference
+      end
     }
   end
   #persist :_ary_gene_strand_reference

@@ -51,8 +51,12 @@ module Genotype
 
     def jobname
       if @jobname.nil?
-        @jobname ||= "Meta-genotype: " + self.collect{|g| g.jobname} * ", "
-        @jobname[100..-1] = " (etc. #{self.length} genotypes)" if @jobname.length > 100
+        if self.length > 3
+          @jobname ||= "Meta-genotype: " + self.collect{|g| g.jobname}[0..2] * ", " + " + #{self.length - 3} more"
+        else
+          @jobname ||= "Meta-genotype: " + self.collect{|g| g.jobname} * ", "
+        end
+        @jobname[100..-1] = " (etc. #{self.length} genotypes)" if @jobname.length > 135
       end
       @jobname
     end

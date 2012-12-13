@@ -60,9 +60,12 @@ class TestGenomicMutation < Test::Unit::TestCase
 
   def test_coding
     assert MUTATION.coding?
-    ddd NON_CODING_MUTATION.affected_exons
     assert(!NON_CODING_MUTATION.coding?)
-    ddd SPLICING.affected_genes
+  end
+
+  def test_masked_annotations
+    assert MUTATION.info.include?(:jobname)
+    assert(!MUTATION.info(true).include?(:jobname))
   end
 
 
