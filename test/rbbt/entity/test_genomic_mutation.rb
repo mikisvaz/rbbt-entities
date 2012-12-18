@@ -9,6 +9,7 @@ class TestGenomicMutation < Test::Unit::TestCase
   MUTATION = GenomicMutation.setup("10:124745844:A:158", "Test", "Hsa/jun2011")
   NON_CODING_MUTATION = GenomicMutation.setup("12:52844451:T", "Test", "Hsa/jun2011")
   SPLICING = GenomicMutation.setup("18:14787040:A", "Test", "Hsa/jun2011")
+  SPLICING2 = GenomicMutation.setup("3:125551372:G:1265.90:1", "test", "Hsa/jun2011", true)
 
   FORWARD_STRAND_FIRST_EXON_START = GenomicMutation.setup("10:89622870", "Test", "Hsa/jun2011")
   FORWARD_STRAND_FIRST_EXON_END   = GenomicMutation.setup("10:89624305", "Test", "Hsa/jun2011")
@@ -66,6 +67,11 @@ class TestGenomicMutation < Test::Unit::TestCase
   def test_masked_annotations
     assert MUTATION.info.include?(:jobname)
     assert(!MUTATION.info(true).include?(:jobname))
+  end
+
+  def test_transcripts_with_affected_splicing
+    assert(SPLICING.transcripts_with_affected_splicing.any?)
+    assert(SPLICING2.transcripts_with_affected_splicing.empty?)
   end
 
 

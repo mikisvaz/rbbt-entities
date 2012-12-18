@@ -46,6 +46,11 @@ module GenomicMutation
     @watson
   end
 
+  def self.exon_rank_index(organism)
+    @@exon_rank_indices ||= {}
+    @@exon_rank_indices[organism] ||= Organism.transcript_exons(organism).tsv :persist => true, :type => :double, :unnamed => true
+  end
+
   def self.exon_position_index(organism)
     @@exon_position_indices ||= {}
     @@exon_position_indices[organism] ||= Organism.exons(organism).tsv :persist => true, :type => :list, :cast => :to_i, :fields => ["Exon Strand", "Exon Chr Start", "Exon Chr End"], :unnamed => true
@@ -331,40 +336,6 @@ module GenomicMutation
     Sequence.job(:exon_junctions_at_genomic_positions, jobname, :organism => organism, :positions => self.clean_annotations).run.chunked_values_at(self)
   end
   #persist :exon_junctions
-
-  property :in_exon_junction? => :array2single do
-    exon_position_index ||= GenomicMutation.exon_position_index(organism)
-
-    start_pos = exon_position_index.identify_field "Exon Chr Start"
-    strand_pos = exon_position_index.identify_field "Exon Strand"
-    all_exons = self.genes.flatten.transcripts.compact.flatten.collect{|t| t.exons}.compact.flatten.uniq.select{|e| exon_position_index.include?(e) }.sort_by{|e| exon_position_index[e][start_pos] }
-
-
-    first_exon = all_exons.first
-    last_exon = all_exons.last
-
-    exon_junctions.collect{|l| 
-      l.select{|j|
-        exon, junction_type = j.split(":")
-        if not exon_position_index.include? exon
-          raise "Exon #{ exon } not in position index"
-        end
-        strand = exon_position_index[exon][strand_pos]
-        case
-        when (strand == 1 and exon == first_exon and junction_type =~ /acceptor/)
-          false
-        when (strand == 1 and exon == last_exon and junction_type =~ /donor/)
-          false
-        when (strand == -1 and exon == first_exon and junction_type =~ /donor/)
-          false
-        when (strand == -1 and exon == last_exon and junction_type =~ /acceptor/)
-          false
-        else
-          true
-        end
-      }
-    }.collect{|l| not l.nil? and not l.empty?}
-  end
   #persist :_ary_in_exon_junction?
 
   property :over_range? => :array2single do |range|
@@ -391,16 +362,85 @@ module GenomicMutation
   end
   #persist :affected_exons
 
+  #property :transcripts_with_affected_splicing  => :array2single do
+  #  exon2transcript_index = GenomicMutation.transcripts_for_exon_index(organism)
+  #  transcripts = exon_junctions.collect{|junctions|
+  #    exons = junctions.nil? ? [] : junctions.collect{|exon_junction| exon_junction.split(":").first }
+  #    exons.empty? ? 
+  #      [] : exon2transcript_index.chunked_values_at(exons).flatten
+  #  }
+  #  Transcript.setup(transcripts, "Ensembl Transcript ID", organism)
+  #end
+
+  #property :in_exon_junction? => :array2single do
+  #  exon_position_index ||= GenomicMutation.exon_position_index(organism)
+
+  #  start_pos = exon_position_index.identify_field "Exon Chr Start"
+  #  strand_pos = exon_position_index.identify_field "Exon Strand"
+  #  all_exons = self.genes.flatten.transcripts.compact.flatten.collect{|t| t.exons}.compact.flatten.uniq.select{|e| exon_position_index.include?(e) }.sort_by{|e| exon_position_index[e][start_pos] }
+
+  #  first_exon = all_exons.first
+  #  last_exon = all_exons.last
+
+  #  exon_junctions.collect{|l| 
+  #    l.select{|j|
+  #      exon, junction_type = j.split(":")
+  #      if not exon_position_index.include? exon
+  #        raise "Exon #{ exon } not in position index"
+  #      end
+  #      strand = exon_position_index[exon][strand_pos]
+  #      case
+  #      when (strand == 1 and exon == first_exon and junction_type =~ /acceptor/)
+  #        false
+  #      when (strand == 1 and exon == last_exon and junction_type =~ /donor/)
+  #        false
+  #      when (strand == -1 and exon == first_exon and junction_type =~ /donor/)
+  #        false
+  #      when (strand == -1 and exon == last_exon and junction_type =~ /acceptor/)
+  #        false
+  #      else
+  #        true
+  #      end
+  #    }
+  #  }.collect{|l| not l.nil? and not l.empty?}
+  #end
+
+
   property :transcripts_with_affected_splicing  => :array2single do
     exon2transcript_index = GenomicMutation.transcripts_for_exon_index(organism)
+    transcript_exon_rank  = GenomicMutation.exon_rank_index(organism)
+
     transcripts = exon_junctions.collect{|junctions|
-      exons = junctions.nil? ? [] : junctions.collect{|exon_junction| exon_junction.split(":").first }
-      exons.empty? ? 
-        [] : exon2transcript_index.chunked_values_at(exons).flatten
+      if junctions.nil? or junctions.empty?
+        []
+      else
+        junctions.collect{|junction|
+          exon, junction_type = junction.split(":")
+          transcripts = exon2transcript_index[exon]
+          transcripts.select do |transcript|
+            transcript_info = transcript_exon_rank[transcript]
+
+            total_exons = transcript_info[0].length
+            rank = transcript_info[1][transcript_info[0].index(exon)].to_i
+
+            case
+            when (rank == 1 and junction_type =~ /acceptor/)
+              false
+            when (rank == total_exons and junction_type =~ /donor/)
+              false
+            else
+              true
+            end
+          end
+        }.flatten
+      end
     }
     Transcript.setup(transcripts, "Ensembl Transcript ID", organism)
   end
-  #persist :transcripts_with_affected_splicing
+
+  property :in_exon_junction? => :array2single do
+    transcripts_with_affected_splicing.collect{|list| list.nil? ? false : list.any?}
+  end
 
   property :affected_transcripts  => :array2single do
     exon2transcript_index = GenomicMutation.transcripts_for_exon_index(organism)
