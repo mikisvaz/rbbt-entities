@@ -438,8 +438,13 @@ module GenomicMutation
     Transcript.setup(transcripts, "Ensembl Transcript ID", organism)
   end
 
-  property :in_exon_junction? => :array2single do
-    transcripts_with_affected_splicing.collect{|list| list.nil? ? false : list.any?}
+  property :in_exon_junction? => :array2single do |*args|
+    gene = args.first
+    if gene
+      transcripts_with_affected_splicing.collect{|list| list.nil? ? false : list.gene.include?(gene)}
+    else
+      transcripts_with_affected_splicing.collect{|list| list.nil? ? false : list.any?}
+    end
   end
 
   property :affected_transcripts  => :array2single do
@@ -472,13 +477,19 @@ module GenomicMutation
   end
   #persist :damaging?
 
-  property :worst_consequence => :array2single do
+  property :worst_consequence => :array2single do |*args|
+    gene = args.first
+
     all_mutated_isoforms = mutated_isoforms.compact.flatten
+
+    all_mutated_isoforms = all_mutated_isoforms.select{|mi| mi.transcript.gene == gene} if gene
+
     non_synonymous_mutated_isoforms = all_mutated_isoforms.select{|mi| mi.non_synonymous}
     truncated_mutated_isoforms = all_mutated_isoforms.select{|mi| mi.truncated}
     damage_scores = Misc.process_to_hash(non_synonymous_mutated_isoforms){|mis| mis.any? ? mis.damage_scores : []}
     damaged = all_mutated_isoforms.select{|mi| mi.damaged? }
-    in_exon_junction?.zip(mutated_isoforms, type).collect{|ej,mis,type|
+
+    in_exon_junction?(gene).zip(mutated_isoforms, type).collect{|ej,mis,type|
       case
       when (mis.nil? or mis.subset(non_synonymous_mutated_isoforms).empty? and ej and not type == 'none')
         "In Exon Junction"
