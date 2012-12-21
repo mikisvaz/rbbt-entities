@@ -5,11 +5,11 @@
 
 Gem::Specification.new do |s|
   s.name = "rbbt-entities"
-  s.version = "1.1.1"
+  s.version = "2.0.0"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Miguel Vazquez"]
-  s.date = "2012-01-31"
+  s.date = "2012-12-21"
   s.description = "Entities for handling tsv files, caches, etc"
   s.email = "miguel.vazquez@cnio.es"
   s.extra_rdoc_files = [
@@ -17,11 +17,15 @@ Gem::Specification.new do |s|
   ]
   s.files = [
     "LICENSE",
+    "bin/icgc2rbbt.rb",
+    "bin/vcf2rbbt.rb",
     "lib/rbbt/entity.rb",
+    "lib/rbbt/entity/chromosome_range.rb",
     "lib/rbbt/entity/cnv.rb",
     "lib/rbbt/entity/gene.rb",
     "lib/rbbt/entity/genomic_mutation.rb",
     "lib/rbbt/entity/genotype.rb",
+    "lib/rbbt/entity/interactor.rb",
     "lib/rbbt/entity/misc.rb",
     "lib/rbbt/entity/mutated_isoform.rb",
     "lib/rbbt/entity/pmid.rb",
@@ -30,25 +34,22 @@ Gem::Specification.new do |s|
   ]
   s.homepage = "http://github.com/mikisvaz/rbbt-util"
   s.require_paths = ["lib"]
-  s.rubygems_version = "1.8.12"
+  s.rubygems_version = "1.8.24"
   s.summary = "Entities for the Ruby Bioinformatics Toolkit (rbbt)"
-  s.test_files = ["test/test_helper.rb", "test/rbbt/entity/test_gene.rb", "test/rbbt/entity/test_genomic_mutation.rb", "test/rbbt/entity/test_mutated_isoform.rb", "test/rbbt/entity/test_protein.rb", "test/rbbt/test_entity.rb"]
+  s.test_files = ["test/test_helper.rb", "test/rbbt/entity/test_gene.rb", "test/rbbt/entity/test_genomic_mutation.rb", "test/rbbt/entity/test_mutated_isoform.rb", "test/rbbt/entity/test_protein.rb", "test/rbbt/entity/test_pmid.rb", "test/rbbt/test_entity.rb"]
 
   if s.respond_to? :specification_version then
     s.specification_version = 3
 
     if Gem::Version.new(Gem::VERSION) >= Gem::Version.new('1.2.0') then
       s.add_runtime_dependency(%q<rbbt-util>, [">= 0"])
-      s.add_runtime_dependency(%q<rbbt-sources>, [">= 0"])
       s.add_runtime_dependency(%q<rbbt-dm>, [">= 0"])
     else
       s.add_dependency(%q<rbbt-util>, [">= 0"])
-      s.add_dependency(%q<rbbt-sources>, [">= 0"])
       s.add_dependency(%q<rbbt-dm>, [">= 0"])
     end
   else
     s.add_dependency(%q<rbbt-util>, [">= 0"])
-    s.add_dependency(%q<rbbt-sources>, [">= 0"])
     s.add_dependency(%q<rbbt-dm>, [">= 0"])
   end
 end
