@@ -334,7 +334,10 @@ module GenomicMutation
   property :mutated_isoforms => :array2single do
     res = Sequence.job(:mutated_isoforms_for_genomic_mutations, jobname, :watson => watson, :organism => organism, :mutations => self.clean_annotations).run.chunked_values_at self
     res.each{|list| list.organism = organism unless list.nil?}
-    res.compact[0].annotate res if res.compact[0].respond_to? :annotate
+    if Annotated === (first = res.compact[0])
+      first.annotate(res)
+      res.extend AnnotatedArray
+    end
     res
   end
   #persist :_ary_mutated_isoforms

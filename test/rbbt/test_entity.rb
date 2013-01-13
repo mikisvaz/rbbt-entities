@@ -66,7 +66,7 @@ class TestEntity < Test::Unit::TestCase
 
   def test_property_ary
     a = ["String1", "String2"]
-    a.extend ReversableString
+    ReversableString.setup(a)
 
     $count = 0
 
@@ -86,7 +86,7 @@ class TestEntity < Test::Unit::TestCase
 
   def test_property_single
     a = ["String1", "String2"]
-    a.extend ReversableString
+    ReversableString.setup a
 
     $count = 0
 
@@ -98,7 +98,7 @@ class TestEntity < Test::Unit::TestCase
 
   def test_property_ary_p
     a = ["String1", "String2"]
-    a.extend ReversableString
+    ReversableString.setup a
 
     $count = 0
 
@@ -109,7 +109,7 @@ class TestEntity < Test::Unit::TestCase
 
   def test_property_single_p
     a = ["String1", "String2"]
-    a.extend ReversableString
+    ReversableString.setup a
 
     $count = 0
 
@@ -121,7 +121,7 @@ class TestEntity < Test::Unit::TestCase
 
   def test_property_ary_p_array
     a = ["String1", "String2"]
-    a.extend ReversableString
+    ReversableString.setup a
 
     $count = 0
 
@@ -133,7 +133,7 @@ class TestEntity < Test::Unit::TestCase
 
   def test_unpersist
     a = ["String1", "String2"]
-    a.extend ReversableString
+    ReversableString.setup a
 
     # Before persist
     assert(! ReversableString.persisted?(:random))
@@ -167,7 +167,7 @@ class TestEntity < Test::Unit::TestCase
     assert_equal string.length, string.annotation_list.length
   end
 
-  def test_performance
+  def __test_performance
     require 'rbbt/entity/gene'
     Misc.profile(:min_percent => 2) do
       1000.times do
@@ -182,7 +182,7 @@ class TestEntity < Test::Unit::TestCase
     end
 
     Misc.benchmark(100000) do
-      Gene.setup_info("", :foo => "foo", :bar => "bar")
+      Gene.setup("", :foo => "foo", :bar => "bar")
     end
 
     Misc.benchmark(100000) do

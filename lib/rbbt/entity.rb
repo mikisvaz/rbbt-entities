@@ -1,6 +1,7 @@
 require 'rbbt/annotations'
 
-module Entity
+module Entity 
+
   class << self
     attr_accessor :formats, :entity_property_cache, :entity_list_cache
   end
@@ -28,13 +29,17 @@ module Entity
           alias prev_entity_extended extended 
         end 
 
-        def self.extended(data)
+        def self._extended(data)
           prev_entity_extended(data)
 
-          if Array === data 
-            data.extend AnnotatedArray unless (first = data.compact.first) != nil and Annotated === first and 
-                                               (data.annotation_types - data.compact.first.annotation_types).any?
-          end
+          #if Array === data 
+          #  data.extend AnnotatedArray unless (first = data.compact.first) != nil and Annotated === first and 
+          #                                     (data.annotation_types - data.compact.first.annotation_types).any?
+          #end
+
+         
+
+
 
           data
         end
@@ -68,7 +73,7 @@ module Entity
         end
       end
 
-      def clean_annotations
+      def clean_annotations_new
         case
         when self.nil?
           nil
