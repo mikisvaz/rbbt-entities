@@ -12,12 +12,15 @@ module Entity
   UNPERSISTED_PREFIX = "entity_unpersisted_property_"
 
   def self.extended(base)
-    base.extend Annotation unless Annotation === base
-
-
+    base.extend Annotation
     Entity.formats[base.to_s] = base
+
     base.module_eval do
       attr_accessor :_ary_property_cache
+
+      def _ary_property_cache
+        @_ary_property_cache ||= {}
+      end
 
       if not methods.include? "prev_entity_extended"
         class << self
@@ -28,13 +31,9 @@ module Entity
         def self.extended(data)
           prev_entity_extended(data)
 
-          data._ary_property_cache = {}
-
-          if Array === data and 
-            not AnnotatedArray === data and 
-            not (data.compact.first != nil and Annotated === data.compact.first and (data.annotation_types - data.compact.first.annotation_types).any?)
-
-            data.extend AnnotatedArray
+          if Array === data 
+            data.extend AnnotatedArray unless (first = data.compact.first) != nil and Annotated === first and 
+                                               (data.annotation_types - data.compact.first.annotation_types).any?
           end
 
           data
@@ -143,7 +142,7 @@ module Entity
             case
             when Array === self
               self.send(ary_name, *args)
-            when (Array === self.container and self.container.respond_to? ary_name)
+            when (Array === self.container and not self.container_index.nil? and self.container.respond_to? ary_name)
               cache_code = Misc.hash2md5({:name => ary_name, :args => args})
               res = (self.container._ary_property_cache[cache_code] ||=  self.container.send(name, *args))
               if Hash === res

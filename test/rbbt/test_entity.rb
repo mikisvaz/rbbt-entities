@@ -4,9 +4,19 @@ require 'rbbt/entity'
 require 'rbbt/util/tmpfile'
 require 'test/unit'
 
+class TestA
+  attr_accessor :foo, :bar
+  def initialize(foo, bar)
+    @foo = foo
+    @bar = bar
+  end
+end
+
 module ReversableString
   extend Entity
-  
+
+  self.annotation :foo, :bar
+
   property :reverse_text_ary => :array do
     $count += 1
     self.collect{|s| s.reverse}
@@ -54,7 +64,7 @@ end
 
 class TestEntity < Test::Unit::TestCase
 
-  def _test_property_ary
+  def test_property_ary
     a = ["String1", "String2"]
     a.extend ReversableString
 
@@ -74,7 +84,7 @@ class TestEntity < Test::Unit::TestCase
     end
   end
 
-  def _test_property_single
+  def test_property_single
     a = ["String1", "String2"]
     a.extend ReversableString
 
@@ -86,7 +96,7 @@ class TestEntity < Test::Unit::TestCase
     assert_equal 3, $count
   end
 
-  def _test_property_ary_p
+  def test_property_ary_p
     a = ["String1", "String2"]
     a.extend ReversableString
 
@@ -97,7 +107,7 @@ class TestEntity < Test::Unit::TestCase
     assert_equal 1, $count
   end
 
-  def _test_property_single_p
+  def test_property_single_p
     a = ["String1", "String2"]
     a.extend ReversableString
 
@@ -109,7 +119,7 @@ class TestEntity < Test::Unit::TestCase
     assert_equal 2, $count
   end
 
-  def _test_property_ary_p_array
+  def test_property_ary_p_array
     a = ["String1", "String2"]
     a.extend ReversableString
 
@@ -121,7 +131,7 @@ class TestEntity < Test::Unit::TestCase
     assert_equal 1, $count
   end
 
-  def _test_unpersist
+  def test_unpersist
     a = ["String1", "String2"]
     a.extend ReversableString
 
@@ -150,22 +160,33 @@ class TestEntity < Test::Unit::TestCase
 
   end
 
-  def _test_persist_annotations
+  def test_persist_annotations
     string = 'aaabbbccc'
     ReversableString.setup(string)
     assert_equal string.length, string.annotation_list.length
     assert_equal string.length, string.annotation_list.length
   end
 
-  def __test_performance
+  def test_performance
+    require 'rbbt/entity/gene'
+    Misc.profile(:min_percent => 2) do
+      1000.times do
+        TestA.new "foo", "bar"
+      end
+    end
 
-    require 'rbbt/workflow'
-    Workflow.require_workflow "StudyExplorer"
+    Misc.profile(:min_percent => 2) do
+      1000.times do
+        Gene.setup_positional("", "foo", "bar")
+      end
+    end
 
-    s = Study.setup("CLL")
-    mutations = s.cohort.metagenotype
-    Misc.profile_html(:min_percent => 1) do
-      mutated_isoforms = mutations.each{|m| m.genes.each{|g| g}}
+    Misc.benchmark(100000) do
+      Gene.setup_info("", :foo => "foo", :bar => "bar")
+    end
+
+    Misc.benchmark(100000) do
+      TestA.new "foo", "bar"
     end
   end
 
@@ -174,14 +195,21 @@ class TestEntity < Test::Unit::TestCase
     Workflow.require_workflow "StudyExplorer"
 
     s = Study.setup("CLL")
-    mutations = s.cohort.metagenotype.mutated_isoforms
+    mutations = s.cohort.metagenotype
 
-    Misc.benchmark(100) do
-      mutations.each{|m| m}
+    mis = mutations.mutated_isoforms.compact.flatten
+
+    Misc.profile(:min_percent => 1) do
+      mis.each{|m| m}
     end
 
-    Misc.benchmark(100) do
-      mutations.clean_annotations.each{|m| m}
+
+    Misc.benchmark(10) do
+      mis.each{|m| m}
+    end
+
+    Misc.benchmark(10) do
+      mis.clean_annotations.each{|m| m}
     end
 
     m = mutations.first

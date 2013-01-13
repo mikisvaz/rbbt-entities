@@ -279,19 +279,26 @@ module GenomicMutation
 
   property :affected_genes => :array2single do
     _mutated_isoforms = mutated_isoforms
+
     mi_gene = Misc.process_to_hash(MutatedIsoform.setup(_mutated_isoforms.compact.flatten.uniq, organism)){|mis| mis.protein.gene}
-    from_protein = mutated_isoforms.collect{|mis|
+
+    from_protein = mutated_isoforms.clean_annotations.collect{|mis|
       genes = mis.nil? ? [] : mi_gene.values_at(*mis).compact
       Gene.setup(genes.uniq, "Ensembl Gene ID", organism)
     }
+
+    ddd 3
     is_exon_junction = self.in_exon_junction?.zip(self.type).collect{|in_ex,type| in_ex and type != "none"}
+    ddd 4
     genes_with_altered_splicing = self.transcripts_with_affected_splicing.collect{|transcripts| transcripts.gene}
+    ddd 5
     from_protein.each_with_index do |list, i|
       if is_exon_junction[i] and genes_with_altered_splicing[i]
         list.concat genes_with_altered_splicing[i] 
         list.uniq!
       end
     end
+    ddd 6
     Gene.setup(from_protein, "Ensembl Gene ID", organism)
   end
   #persist :_ary_affected_genes
