@@ -34,6 +34,15 @@ module GenomicMutation
   #persist :guess_watson
 
   def watson
+    current = annotation_values[:watson]
+    if current.nil? and Array === self
+      watson = guess_watson
+    else
+      current
+    end
+  end
+
+  def _watson
     if @watson.nil? and Array === self
       @watson = :missing
       @watson = guess_watson
@@ -274,6 +283,7 @@ module GenomicMutation
     genes = nil
     genes = genes_tsv.chunked_values_at self
     Gene.setup(genes, "Ensembl Gene ID", organism)
+    genes
   end
   #persist :_ary_genes
 
@@ -287,18 +297,15 @@ module GenomicMutation
       Gene.setup(genes.uniq, "Ensembl Gene ID", organism)
     }
 
-    ddd 3
     is_exon_junction = self.in_exon_junction?.zip(self.type).collect{|in_ex,type| in_ex and type != "none"}
-    ddd 4
     genes_with_altered_splicing = self.transcripts_with_affected_splicing.collect{|transcripts| transcripts.gene}
-    ddd 5
     from_protein.each_with_index do |list, i|
       if is_exon_junction[i] and genes_with_altered_splicing[i]
         list.concat genes_with_altered_splicing[i] 
         list.uniq!
       end
     end
-    ddd 6
+
     Gene.setup(from_protein, "Ensembl Gene ID", organism)
   end
   #persist :_ary_affected_genes

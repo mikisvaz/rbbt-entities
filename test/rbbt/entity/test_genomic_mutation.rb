@@ -74,7 +74,14 @@ class TestGenomicMutation < Test::Unit::TestCase
     assert(SPLICING2.transcripts_with_affected_splicing.empty?)
   end
 
+  def test_genes_persist
 
+    GenomicMutation.with_persisted :genes do
+
+      m = MUTATION.annotate(MUTATION.dup)
+      assert AnnotatedArray === m.genes
+    end
+  end
 end
 
 
