@@ -16,7 +16,11 @@ module Transcript
           else
             @@enst2ensg[organism][transcript]
           end
-    Gene.setup(res, "Ensembl Gene ID", organism) if defined? Gene
+
+    if defined? Gene
+      Gene.fast_setup(res, {:format => "Ensembl Gene ID", :organism => organism})
+    end
+
     res
   end
 

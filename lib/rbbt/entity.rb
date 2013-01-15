@@ -26,23 +26,7 @@ module Entity
       if not methods.include? "prev_entity_extended"
         class << self
           attr_accessor :template, :list_template, :action_template, :list_action_template, :keep_id
-          alias prev_entity_extended extended 
         end 
-
-        def self._extended(data)
-          prev_entity_extended(data)
-
-          #if Array === data 
-          #  data.extend AnnotatedArray unless (first = data.compact.first) != nil and Annotated === first and 
-          #                                     (data.annotation_types - data.compact.first.annotation_types).any?
-          #end
-
-         
-
-
-
-          data
-        end
       end
 
       def self.format=(formats)

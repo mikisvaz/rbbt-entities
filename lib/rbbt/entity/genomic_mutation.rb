@@ -34,21 +34,16 @@ module GenomicMutation
   #persist :guess_watson
 
   def watson
-    current = annotation_values[:watson]
-    if current.nil? and Array === self
-      watson = guess_watson
-    else
-      current
+    if @current_watson.nil?
+      current = annotation_values[:watson]
+      if current.nil? and Array === self
+        watson = current = guess_watson
+      else
+        current
+      end
+      @current_watson = current
     end
-  end
-
-  def _watson
-    if @watson.nil? and Array === self
-      @watson = :missing
-      @watson = guess_watson
-    end
-    @watson = false if @watson == "false"
-    @watson
+    @current_watson
   end
 
   def orig_watson
@@ -292,7 +287,8 @@ module GenomicMutation
 
     mi_gene = Misc.process_to_hash(MutatedIsoform.setup(_mutated_isoforms.compact.flatten.uniq, organism)){|mis| mis.protein.gene}
 
-    from_protein = mutated_isoforms.clean_annotations.collect{|mis|
+    _mutated_isoforms = _mutated_isoforms.clean_annotations if _mutated_isoforms.respond_to? :clean_annotations
+    from_protein = _mutated_isoforms.collect{|mis|
       genes = mis.nil? ? [] : mi_gene.values_at(*mis).compact
       Gene.setup(genes.uniq, "Ensembl Gene ID", organism)
     }
@@ -309,7 +305,6 @@ module GenomicMutation
     Gene.setup(from_protein, "Ensembl Gene ID", organism)
   end
   #persist :_ary_affected_genes
-
 
   property :relevant? => :array2single do
     affected_genes.collect{|list| list and list.any?}
@@ -485,6 +480,7 @@ module GenomicMutation
   end
 
   property :damaging? => :array2single do |*args|
+
     all_mutated_isoforms = mutated_isoforms.compact.flatten
     damaged_mutated_isoforms = all_mutated_isoforms.select{|mi| mi.damaged?(*args)}
     exon_junctions.zip(mutated_isoforms, self.type).collect do |exs, mis, type|
@@ -492,7 +488,6 @@ module GenomicMutation
       (Array === mis and (damaged_mutated_isoforms & mis).any?)
     end
   end
-  #persist :damaging?
 
   property :worst_consequence => :array2single do |*args|
     gene = args.first
