@@ -5,12 +5,11 @@
 
 Gem::Specification.new do |s|
   s.name = "rbbt-entities"
-  s.version = "2.0.0"
+  s.version = "2.1.0"
 
   s.required_rubygems_version = Gem::Requirement.new(">= 0") if s.respond_to? :required_rubygems_version=
   s.authors = ["Miguel Vazquez"]
-  s.date = "2012-12-21"
-
+  s.date = "2013-01-15"
   s.description = "Entities for handling tsv files, caches, etc"
   s.email = "miguel.vazquez@cnio.es"
   s.extra_rdoc_files = [
@@ -37,11 +36,7 @@ Gem::Specification.new do |s|
   s.require_paths = ["lib"]
   s.rubygems_version = "1.8.24"
   s.summary = "Entities for the Ruby Bioinformatics Toolkit (rbbt)"
-<<<<<<< HEAD
   s.test_files = ["test/rbbt/test_entity.rb", "test/rbbt/entity/test_protein.rb", "test/rbbt/entity/test_mutated_isoform.rb", "test/rbbt/entity/test_pmid.rb", "test/rbbt/entity/test_gene.rb", "test/rbbt/entity/test_genomic_mutation.rb", "test/test_helper.rb"]
-=======
-  s.test_files = ["test/test_helper.rb", "test/rbbt/entity/test_gene.rb", "test/rbbt/entity/test_genomic_mutation.rb", "test/rbbt/entity/test_mutated_isoform.rb", "test/rbbt/entity/test_protein.rb", "test/rbbt/entity/test_pmid.rb", "test/rbbt/test_entity.rb"]
->>>>>>> bf2f9b6be00bb5063d73a81c3c1653d8c2364a82
 
   if s.respond_to? :specification_version then
     s.specification_version = 3
