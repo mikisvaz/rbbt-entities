@@ -21,6 +21,8 @@ class TestGenomicMutation < Test::Unit::TestCase
   REVERSE_STRAND_LAST_EXON_START  = GenomicMutation.setup("2:198299696", "Test", "Hsa/jun2011")
   REVERSE_STRAND_LAST_EXON_END    = GenomicMutation.setup("2:198299815", "Test", "Hsa/jun2011")
 
+  IRRELEVANT_MUTATION = GenomicMutation.setup("11:12278388:T:82.0", "Test", "Hsa/jun2011", true)
+
 
   def test_mutated_isoforms
     assert MUTATION.mutated_isoforms.length > 1
@@ -81,6 +83,10 @@ class TestGenomicMutation < Test::Unit::TestCase
       m = MUTATION.annotate(MUTATION.dup)
       assert AnnotatedArray === m.genes
     end
+  end
+
+  def test_irrelevant
+    assert(!IRRELEVANT_MUTATION.damaging?)
   end
 end
 

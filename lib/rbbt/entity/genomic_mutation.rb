@@ -483,7 +483,7 @@ module GenomicMutation
 
     all_mutated_isoforms = mutated_isoforms.compact.flatten
     damaged_mutated_isoforms = all_mutated_isoforms.select{|mi| mi.damaged?(*args)}
-    exon_junctions.zip(mutated_isoforms, self.type).collect do |exs, mis, type|
+    transcripts_with_affected_splicing.zip(mutated_isoforms, self.type).collect do |exs, mis, type|
       (Array === exs and exs.any? and not type == "none") or
       (Array === mis and (damaged_mutated_isoforms & mis).any?)
     end
