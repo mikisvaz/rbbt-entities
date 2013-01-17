@@ -12,6 +12,7 @@ module Entity
   
   UNPERSISTED_PREFIX = "entity_unpersisted_property_"
 
+
   def self.extended(base)
     base.extend Annotation
     Entity.formats[base.to_s] = base
@@ -19,14 +20,10 @@ module Entity
     base.module_eval do
       attr_accessor :_ary_property_cache
 
+      attr_accessor :template, :list_template, :action_template, :list_action_template, :keep_id
+
       def _ary_property_cache
         @_ary_property_cache ||= {}
-      end
-
-      if not methods.include? "prev_entity_extended"
-        class << self
-          attr_accessor :template, :list_template, :action_template, :list_action_template, :keep_id
-        end 
       end
 
       def self.format=(formats)
@@ -36,38 +33,8 @@ module Entity
         end
       end
 
-      def clean_annotations_old
-        return nil if self.nil?
-        return self.dup
-        case
-        when self.nil?
-          nil
-        when String === self
-          "" << self
-        when self.respond_to?(:annotated_array_clean_collect)
-          self.annotated_array_clean_collect{|e| e.respond_to?(:clean_annotations)? e.clean_annotations : e}
-        when Array === self
-          self.collect{|e| e.respond_to?(:clean_annotations)? e.clean_annotations : e}
-        when (Fixnum === self)
-          0 + self
-        when (Float === self)
-          0.0 + self
-        else
-          raise "Unknown casuistic in clean_annotations for object: #{self.inspect}"
-        end
-      end
-
-      def clean_annotations_new
-        case
-        when self.nil?
-          nil
-        when Array === self
-          self.dup.collect{|e| e.respond_to?(:clean_annotations)? e.clean_annotations : e}
-        when String === self
-          "" << self
-        else
-          self.dup
-        end
+      def property(*args, &block)
+        class << self; self; end.property(*args,&block)
       end
 
       def to_yaml(*args)
@@ -77,7 +44,6 @@ module Entity
       def encode_with(coder)
         coder.scalar = clean_annotations
       end
-
 
       def marshal_dump
         clean_annotations

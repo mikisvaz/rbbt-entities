@@ -35,21 +35,17 @@ module CNV
   property :chromosome => :array2single do
     self.clean_annotations.collect{|mut| mut.split(":")[0]}
   end
-  persist :_ary_chromosome
 
   property :start => :array2single do
     self.clean_annotations.collect{|mut| mut.split(":")[1].to_i}
   end
-  persist :_ary_start
 
   property :end => :array2single do
     self.clean_annotations.collect{|mut| mut.split(":")[2].to_i}
   end
-  persist :_ary_end
 
   property :range => :array2single do
     start.zip(self.end).collect{|s,e| (s..e)}
   end
-
 end
  
