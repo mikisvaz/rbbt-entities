@@ -285,9 +285,12 @@ module GenomicMutation
   property :affected_genes => :array2single do
     _mutated_isoforms = mutated_isoforms
 
-    mi_gene = Misc.process_to_hash(MutatedIsoform.setup(_mutated_isoforms.compact.flatten.uniq, organism)){|mis| mis.protein.gene}
+    non_synonymous_mutated_isoforms = MutatedIsoform.setup(_mutated_isoforms.compact.flatten.uniq, organism).reject{|mi| mi.consequence == "SYNONYMOUS" or mi.consequence == "UTR"}
+
+    mi_gene = Misc.process_to_hash(non_synonymous_mutated_isoforms){|mis| mis.protein.gene}
 
     _mutated_isoforms = _mutated_isoforms.clean_annotations if _mutated_isoforms.respond_to? :clean_annotations
+
     from_protein = _mutated_isoforms.collect{|mis|
       genes = mis.nil? ? [] : mi_gene.values_at(*mis).compact
       Gene.setup(genes.uniq, "Ensembl Gene ID", organism)
