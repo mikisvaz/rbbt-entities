@@ -85,7 +85,7 @@ module GenomicMutation
   def self.dbSNP_index(organism)
     build = Organism.hg_build(organism)
     @@dbSNP_index ||= {}
-    @@dbSNP_index[build] ||= DbSNP[build == "hg19" ? "mutations" : "mutations_hg18"].tsv :key_field => "Genomic Mutation", :unnamed => true,  :type => :single, :persist => true
+    @@dbSNP_index[build] ||= DbSNP[build == "hg19" ? "mutations" : "mutations_hg18"].tsv :key_field => "Genomic Mutation", :unnamed => true,  :type => :single, :persist => true, :unnamed => true
   end
 
   def self.dbSNP_position_index(organism)
@@ -95,7 +95,7 @@ module GenomicMutation
 
     @@dbSNP_position_index[build] ||= TSV.open(
       CMD::cmd('sed "s/\([[:alnum:]]\+\):\([[:digit:]]\+\):\([ACTG+-]\+\)/\1:\2/" ', :in => DbSNP[build == "hg19" ? "mutations" : "mutations_hg18"].open, :pipe => true), 
-      :key_field => "Genomic Mutation", :unnamed => true,  :type => :single, :persist => true)
+      :key_field => "Genomic Mutation", :unnamed => true,  :type => :single, :persist => true, :unnamed => true)
 
   end
 
@@ -116,12 +116,12 @@ module GenomicMutation
 
   property :dbSNP => :array2single do
     index ||= GenomicMutation.dbSNP_index(organism)
-    index.chunked_values_at self.collect{|m| m.split(":")[0..2] * ":" }
+    index.chunked_values_at self.clean_annotations.collect{|m| m.split(":")[0..2] * ":" }
   end
 
   property :genomes_1000 => :array2single do
     index ||= GenomicMutation.genomes_1000_index(organism)
-    index.chunked_values_at self.collect{|m| m.split(":")[0..2] * ":" }
+    index.chunked_values_at self.clean_annotations.collect{|m| m.split(":")[0..2] * ":" }
   end
 
   property :COSMIC => :array2single do
@@ -157,8 +157,8 @@ module GenomicMutation
   property :gene_strand_reference => :array2single do
     genes = self.genes
     gene_strand = Misc.process_to_hash(genes.compact.flatten){|list| list.any? ? list.strand : []}
-    reverse = genes.collect{|list| not list.nil? and list.select{|gene| gene_strand[gene].to_s == "-1" }.any? }
-    forward = genes.collect{|list| not list.nil? and list.select{|gene| gene_strand[gene].to_s == "1" }.any? }
+    reverse = genes.collect{|list| not list.nil? and list.clean_annotations.select{|gene| gene_strand[gene].to_s == "-1" }.any? }
+    forward = genes.collect{|list| not list.nil? and list.clean_annotations.select{|gene| gene_strand[gene].to_s == "1" }.any? }
     reference.zip(reverse, forward, base).collect{|reference,reverse, forward, base|
       case
       when (reverse and not forward)
@@ -318,7 +318,7 @@ module GenomicMutation
     mi_damaged = Misc.process_to_hash(MutatedIsoform.setup(_mutated_isoforms.compact.flatten.uniq, organism)){|mis| mis.damaged?(*args)}
     mi_gene = Misc.process_to_hash(MutatedIsoform.setup(_mutated_isoforms.compact.flatten.uniq, organism)){|mis| mis.protein.gene}
     from_protein = _mutated_isoforms.collect{|mis|
-      genes = mis.nil? ? [] : mi_gene.values_at(*mis.select{|mi| mi_damaged[mi]}).compact
+      genes = mis.nil? ? [] : mi_gene.values_at(*mis.clean_annotations.select{|mi| mi_damaged[mi]}).compact
       Gene.setup(genes.uniq, "Ensembl Gene ID", organism)
     }
 
@@ -485,7 +485,7 @@ module GenomicMutation
   property :damaging? => :array2single do |*args|
 
     all_mutated_isoforms = mutated_isoforms.compact.flatten
-    damaged_mutated_isoforms = all_mutated_isoforms.select{|mi| mi.damaged?(*args)}
+    damaged_mutated_isoforms = all_mutated_isoforms.select_by(:damaged?, *args)
     transcripts_with_affected_splicing.zip(mutated_isoforms, self.type).collect do |exs, mis, type|
       (Array === exs and exs.any? and not type == "none") or
       (Array === mis and (damaged_mutated_isoforms & mis).any?)
@@ -496,13 +496,14 @@ module GenomicMutation
     gene = args.first
 
     all_mutated_isoforms = mutated_isoforms.compact.flatten
+    all_mutated_isoforms.extend AnnotatedArray
 
-    all_mutated_isoforms = all_mutated_isoforms.select{|mi| mi.transcript.gene == gene} if gene
+    all_mutated_isoforms = all_mutated_isoforms.select_by(:transcript){|trans| transcript.gene == gene} if gene and all_mutated_isoforms.any? and Entity === all_mutated_isoforms
 
-    non_synonymous_mutated_isoforms = all_mutated_isoforms.select{|mi| mi.non_synonymous}
-    truncated_mutated_isoforms = all_mutated_isoforms.select{|mi| mi.truncated}
+    non_synonymous_mutated_isoforms = all_mutated_isoforms.select_by(:non_synonymous)
+    truncated_mutated_isoforms = all_mutated_isoforms.select_by(:truncated)
     damage_scores = Misc.process_to_hash(non_synonymous_mutated_isoforms){|mis| mis.any? ? mis.damage_scores : []}
-    damaged = all_mutated_isoforms.select{|mi| mi.damaged? }
+    damaged = all_mutated_isoforms.select_by(:damaged?, *args)
 
     in_exon_junction?(gene).zip(mutated_isoforms, type).collect{|ej,mis,type|
       case
