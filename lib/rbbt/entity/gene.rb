@@ -72,8 +72,6 @@ module Gene
     total
   end
 
-
-
   self.annotation :format
   self.annotation :organism
 

@@ -96,7 +96,6 @@ module GenomicMutation
     @@dbSNP_position_index[build] ||= TSV.open(
       CMD::cmd('sed "s/\([[:alnum:]]\+\):\([[:digit:]]\+\):\([ACTG+-]\+\)/\1:\2/" ', :in => DbSNP[build == "hg19" ? "mutations" : "mutations_hg18"].open, :pipe => true), 
       :key_field => "Genomic Mutation", :unnamed => true,  :type => :single, :persist => true, :unnamed => true)
-
   end
 
   property :bases_in_range => :single2array do |range|
