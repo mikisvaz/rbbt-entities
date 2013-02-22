@@ -90,6 +90,7 @@ module Gene
     return self if format == new_format
     genes = Translation.job(:tsv_translate, "", :organism => organism, :genes => self, :format => new_format).exec.values_at(*self)
     Gene.setup(genes, new_format, organism)
+    genes.extend AnnotatedArray if AnnotatedArray === self
     genes
   end
 

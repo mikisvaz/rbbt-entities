@@ -12,7 +12,7 @@ module Transcript
     @@enst2ensg ||= {}
     @@enst2ensg[organism] ||= Organism.gene_transcripts(organism).tsv(:type => :single, :key_field => "Ensembl Transcript ID", :fields => ["Ensembl Gene ID"], :persist => true, :unnamed => true)
     res = if Array === transcript
-            @@enst2ensg[organism].values_at *transcript
+            @@enst2ensg[organism].chunked_values_at transcript
           else
             @@enst2ensg[organism][transcript]
           end
