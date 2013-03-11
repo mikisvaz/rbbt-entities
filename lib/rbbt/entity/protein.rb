@@ -48,14 +48,12 @@ module Protein
     Transcript.setup(res, "Ensembl Transcript ID", self.organism) if defined? Transcript
     res
   end
-  persist :transcript
 
   property :ensembl_protein_image_url => :single2array do
     organism = self.organism || "Hsa"
     ensembl_url = if organism == "Hsa" then "www.ensembl.org" else "#{organism.sub(/.*\//,'')}.archive.ensembl.org" end
     "http://#{ensembl_url}/Homo_sapiens/Component/Transcript/Web/TranslationImage?db=core;p=#{ensembl};_rmd=d2a8;export=svg"
   end
-  persist :ensembl_protein_image_url
 
   property :to => :array2single do |new_format|
     return self if format == new_format
@@ -68,26 +66,22 @@ module Protein
   end
 
   property :gene => :array do
-    Gene.setup(to("Ensembl Protein ID").clean_annotations, "Ensembl Protein ID", organism).ensembl
+    Gene.setup(to("Ensembl Protein ID").clean_annotations.collect{|e| e.nil? ? e : e.dup}, "Ensembl Protein ID", organism).ensembl
   end
-  persist :gene #, :yaml, :file => '/tmp/testes'
 
   property :pfam => :array2single do
     index = Organism.gene_pfam(organism).tsv :flat, :persist => true, :unnamed => true
     pfam = index.values_at(*self).flatten
     Pfam.setup pfam
   end
-  persist :pfam
 
   property :sequence => :array2single do
     Protein.ensp2sequence(organism, self.ensembl)
   end
-  persist :_ary_sequence
 
   property :sequence_length => :array2single do
     sequence.collect{|seq| seq.nil? ? nil : seq.length}
   end
-  persist :_ary_sequence_length
 
   property :marked_svg => :single2array do |*args|
     positions = args.first
@@ -108,6 +102,7 @@ module Protein
       end
     end
 
+    svg = svg.sub(/<svg /,"<svg attr-rbbt-entity='protein'")
     svg
   end
 
@@ -115,8 +110,6 @@ module Protein
     next if uniprot.nil?
     UniProt.pdbs(uniprot)
   end
-  persist :pdbs
 
 
 end
-

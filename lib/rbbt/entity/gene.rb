@@ -36,7 +36,7 @@ module Gene
   def self.gene_list_bases(genes)
     genes = genes.ensembl
     chromosome_genes = {}
-    Misc.process_to_hash(genes){|genes| genes.chromosome}.each{|gene, chr| chromosome_genes[chr] ||= []; chromosome_genes[chr] << gene}
+    Misc.process_to_hash(genes){|genes| genes.chromosome }.each{|gene, chr| chromosome_genes[chr] ||= []; chromosome_genes[chr] << gene}
     total = 0
     chromosome_genes.each do |chr,gs|
       next if chr.nil?

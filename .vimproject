@@ -11,6 +11,7 @@ rbbt-entities=/$PWD filter="*.rb *.rake Rakefile *.rdoc *.R *.sh *.js *.haml *.s
    entity=entity{
     cnv.rb
     gene.rb
+    snp.rb
     genomic_mutation.rb
     genotype.rb
     misc.rb

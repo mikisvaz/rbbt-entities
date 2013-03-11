@@ -47,5 +47,13 @@ module CNV
   property :range => :array2single do
     start.zip(self.end).collect{|s,e| (s..e)}
   end
+
+  property :over_chromosome_range? => :array2single do |r|
+    range_chr, start, eend = r.split(":")
+    range_range = (start.to_i..eend.to_i)
+    chromosome.zip(range).collect do |chr,range| 
+      chr == range_chr and ( range.include?(range_range.begin) or range.include?(range_range.end) or range_range.include?(range.begin) or range_range.include?(range.end))
+    end
+  end
 end
  
