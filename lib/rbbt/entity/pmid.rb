@@ -66,6 +66,11 @@ module PMID
   property :pubmed_url => :single2array do
     "<a class='pmid' href='http://www.ncbi.nlm.nih.gov/pubmed/#{self}'>#{ self }</a>"
   end
-  persist :pubmed_url 
-end
 
+  property :bibtex => :array2single do
+    PubMed.get_article(self).values_at(*self).collect do |article|
+      article.bibtex
+    end
+  end
+
+end

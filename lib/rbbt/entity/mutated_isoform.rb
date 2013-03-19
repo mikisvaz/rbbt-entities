@@ -58,7 +58,7 @@ module MutatedIsoform
     position = self.position
 
     doc = Nokogiri::XML(svg)
-    return nil unless doc.css('svg')
+    return nil unless doc.css('svg') and doc.css('svg').any?
     width = doc.css('svg').first.attr('width').to_f
     height = doc.css('svg').first.attr('height').to_f
     start = doc.css('rect.ac').first.attr('x').to_f
@@ -333,6 +333,7 @@ module MutatedIsoform
   end
 
   property :pdbs_and_positions => :single do
+    return [] if pdbs.nil?
     pdbs.collect do |pdb, info|
       [pdb, Structure.job(:sequence_position_in_pdb, "Protein: #{ self }", :sequence => protein.sequence, :organism => organism, :position => position, :pdb => pdb).run]
     end
