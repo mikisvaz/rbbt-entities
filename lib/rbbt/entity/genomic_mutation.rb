@@ -40,6 +40,7 @@ module GenomicMutation
       else
         current
       end
+      current = false if current == "false"
       @current_watson = current
     end
     @current_watson
