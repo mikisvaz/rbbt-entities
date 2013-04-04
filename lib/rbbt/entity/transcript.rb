@@ -28,7 +28,7 @@ module Transcript
     @@enst2ensp ||= {}
     @@enst2ensp[organism] ||= Organism.transcripts(organism).tsv(:type => :single, :key_field => "Ensembl Transcript ID", :fields => ["Ensembl Protein ID"], :persist => true, :unnamed => true)
     res = if Array === transcript
-            @@enst2ensp[organism].values_at *transcript
+            @@enst2ensp[organism].chunked_values_at transcript
           else
             @@enst2ensp[organism][transcript]
           end
@@ -50,7 +50,7 @@ module Transcript
 
   property :to! => :array2single do |new_format|
     return self if format == new_format
-    res = Translation.job(:tsv_translate_probe, "", :organism => organism, :probes => self, :format => new_format).exec.values_at(*self)
+    res = Translation.job(:tsv_translate_probe, "", :organism => organism, :probes => self, :format => new_format).exec.chunked_values_at(self)
     Gene.setup(res, "Ensembl Gene ID", organism) if defined? Gene
     res
   end
@@ -71,7 +71,7 @@ module Transcript
 
   property :sequence => :array2single do
     transcript_sequence = Organism.transcript_sequence(organism).tsv :persist => true, :unnamed => true
-    transcript_sequence.values_at *self.ensembl
+    transcript_sequence.chunked_values_at self.ensembl
   end
 
   property :sequence_length => :array2single do

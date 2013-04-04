@@ -21,7 +21,7 @@ module Protein
     @@ensp2sequence ||= {}
     @@ensp2sequence[organism] ||= Organism.protein_sequence(organism).tsv :persist => true, :unnamed => true
     if Array === protein
-      @@ensp2sequence[organism].values_at *protein
+      @@ensp2sequence[organism].chunked_values_at protein
     else
       @@ensp2sequence[organism][protein]
     end
@@ -57,7 +57,7 @@ module Protein
 
   property :to => :array2single do |new_format|
     return self if format == new_format
-    Protein.setup(Translation.job(:tsv_translate_protein, "", :organism => organism, :proteins => self, :format => new_format).exec.values_at(*self), new_format, organism)
+    Protein.setup(Translation.job(:tsv_translate_protein, "", :organism => organism, :proteins => self, :format => new_format).exec.chunked_values_at(self), new_format, organism)
   end
 
   property :__to => :array2single do |new_format|
@@ -71,7 +71,7 @@ module Protein
 
   property :pfam => :array2single do
     index = Organism.gene_pfam(organism).tsv :flat, :persist => true, :unnamed => true
-    pfam = index.values_at(*self).flatten
+    pfam = index.chunked_values_at(self).flatten
     Pfam.setup pfam
   end
 

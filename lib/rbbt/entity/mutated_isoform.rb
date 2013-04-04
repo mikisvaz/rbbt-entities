@@ -254,7 +254,7 @@ module MutatedIsoform
     begin
       missense = self.select{|mutation| mutation.consequence == "MISS-SENSE"}
       res = MutEval.job(:snps_and_go, "MutatedIsoforms (#{self.length})", :mutations => missense.sort, :organism => organism).run
-      res.values_at(*self).collect{|v| (v.nil? or v["SNPSandGO Score"].nil? or v["SNPSandGO Score"].empty?) ? 
+      res.chunked_values_at(self).collect{|v| (v.nil? or v["SNPSandGO Score"].nil? or v["SNPSandGO Score"].empty?) ? 
         nil : 
         (v["SNPSandGO Prediction"] == "Disease" ? 1.0 - (10.0 - v["SNPSandGO Score"].to_f) / 20 : 0 + (10.0 - v["SNPSandGO Score"].to_f) / 20)
       }
@@ -268,7 +268,7 @@ module MutatedIsoform
     begin
       missense = self.select{|mutation| mutation.consequence == "MISS-SENSE"}
       res = MutEval.job(:polyphen, "MutatedIsoforms (#{self.length})", :mutations => missense.sort, :organism => organism).run
-      res.values_at(*self).collect{|v| (v.nil? or v["Polyphen Score"].nil? or v["Polyphen Score"].empty?) ? nil : v["Polyphen Score"].to_f / 10}
+      res.chunked_values_at(self).collect{|v| (v.nil? or v["Polyphen Score"].nil? or v["Polyphen Score"].empty?) ? nil : v["Polyphen Score"].to_f / 10}
     rescue
       Log.warn $!.message
       [nil] * self.length
@@ -279,7 +279,7 @@ module MutatedIsoform
     begin
       missense = self.select{|mutation| mutation.consequence == "MISS-SENSE"}
       res = MutEval.job(:sift, "MutatedIsoforms (#{self.length})", :mutations => missense.sort, :organism => organism).run
-      res.values_at(*self).collect{|v| (v.nil? or v["SIFT Score"].nil? or v["SIFT Score"].empty?) ? nil : 1.0 - v["SIFT Score"].to_f}
+      res.chunked_values_at(self).collect{|v| (v.nil? or v["SIFT Score"].nil? or v["SIFT Score"].empty?) ? nil : 1.0 - v["SIFT Score"].to_f}
     rescue
       Log.warn $!.message
       [nil] * self.length
@@ -302,7 +302,7 @@ module MutatedIsoform
         :mutation_assessor => "maTransfic",
       }[method.to_sym]
 
-      MutEval.job(:transFIC, "MutatedIsoforms (#{self.length})", :mutations => missense.sort, :organism => organism).run.values_at(*self).collect{|v| (v.nil? or v[field_name].nil? or v[field_name].empty?) ? nil : v[field_name].to_f}
+      MutEval.job(:transFIC, "MutatedIsoforms (#{self.length})", :mutations => missense.sort, :organism => organism).run.chunked_values_at(self).collect{|v| (v.nil? or v[field_name].nil? or v[field_name].empty?) ? nil : v[field_name].to_f}
     rescue
       Log.warn $!.message
       [nil] * self.length
@@ -319,7 +319,7 @@ module MutatedIsoform
 
     begin
       missense = self.select{|mutation| mutation.consequence == "MISS-SENSE"}
-      MutEval.job(:mutation_assessor, "MutatedIsoforms (#{self.length})", :mutations => missense.sort, :organism => organism).run.values_at(*self).collect{|v| (v.nil? or v["Mutation Assessor Prediction"].nil? or v["Mutation Assessor Prediction"].empty?) ? nil : range[v["Mutation Assessor Prediction"]]}
+      MutEval.job(:mutation_assessor, "MutatedIsoforms (#{self.length})", :mutations => missense.sort, :organism => organism).run.chunked_values_at(self).collect{|v| (v.nil? or v["Mutation Assessor Prediction"].nil? or v["Mutation Assessor Prediction"].empty?) ? nil : range[v["Mutation Assessor Prediction"]]}
     rescue
       Log.warn $!.message
       [nil] * self.length

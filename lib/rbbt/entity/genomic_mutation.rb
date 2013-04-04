@@ -251,7 +251,7 @@ module GenomicMutation
     _mutated_isoforms = _mutated_isoforms.clean_annotations if _mutated_isoforms.respond_to? :clean_annotations
 
     from_protein = _mutated_isoforms.collect{|mis|
-      genes = mis.nil? ? [] : mi_gene.values_at(*mis).compact
+      genes = mis.nil? ? [] : mi_gene.chunked_values_at(mis).compact
       Gene.setup(genes.uniq, "Ensembl Gene ID", organism)
     }
 
@@ -276,7 +276,7 @@ module GenomicMutation
     mi_damaged = Misc.process_to_hash(MutatedIsoform.setup(_mutated_isoforms.compact.flatten.uniq, organism)){|mis| mis.damaged?(*args)}
     mi_gene = Misc.process_to_hash(MutatedIsoform.setup(_mutated_isoforms.compact.flatten.uniq, organism)){|mis| mis.protein.gene}
     from_protein = _mutated_isoforms.collect{|mis|
-      genes = mis.nil? ? [] : mi_gene.values_at(*mis.clean_annotations.select{|mi| mi_damaged[mi]}).compact
+      genes = mis.nil? ? [] : mi_gene.chunked_values_at(mis.clean_annotations.select{|mi| mi_damaged[mi]}).compact
       Gene.setup(genes.uniq, "Ensembl Gene ID", organism)
     }
 
@@ -389,7 +389,7 @@ module GenomicMutation
     Sequence.job(:exons_at_genomic_positions, jobname, :organism => organism, :positions => self.clean_annotations).run.
       chunked_values_at(self).
       collect{|exons| 
-        GenomicMutation.transcripts_for_exon_index(organism).values_at(*exons).compact.flatten.any?
+        GenomicMutation.transcripts_for_exon_index(organism).chunked_values_at(exons).compact.flatten.any?
       }
   end
 

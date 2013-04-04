@@ -17,7 +17,7 @@ module PMID
   end
 
   property :article => :array2single do
-    PubMed.get_article(self).values_at(*self)
+    PubMed.get_article(self).chunked_values_at(self)
   end
 
   property :abstract => :array2single do
@@ -68,7 +68,7 @@ module PMID
   end
 
   property :bibtex => :array2single do
-    PubMed.get_article(self).values_at(*self).collect do |article|
+    PubMed.get_article(self).chunked_values_at(self).collect do |article|
       article.bibtex
     end
   end

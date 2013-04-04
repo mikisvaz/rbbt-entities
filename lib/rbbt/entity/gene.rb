@@ -19,7 +19,7 @@ module Gene
     @@ensg2enst[organism] ||= Organism.gene_transcripts(organism).tsv(:type => :flat, :key_field => "Ensembl Gene ID", :fields => ["Ensembl Transcript ID"], :persist => true, :unnamed => true)
 
     if Array === gene
-      @@ensg2enst[organism].values_at *gene
+      @@ensg2enst[organism].chunked_values_at gene
     else
       @@ensg2enst[organism][gene]
     end
@@ -82,13 +82,13 @@ module Gene
     new_organism = organism.split(":")
     new_organism[0] = other
     new_organism = new_organism * "/"
-    Gene.setup(Organism[organism]["ortholog_#{other}"].tsv(:persist => true, :unnamed => true).values_at(*self.ensembl).collect{|l| l.first}, "Ensembl Gene ID", new_organism)
+    Gene.setup(Organism[organism]["ortholog_#{other}"].tsv(:persist => true, :unnamed => true).chunked_values_at(self.ensembl).collect{|l| l.first}, "Ensembl Gene ID", new_organism)
   end
   persist :ortholog 
 
   property :to => :array2single do |new_format|
     return self if format == new_format
-    genes = Translation.job(:tsv_translate, "", :organism => organism, :genes => self, :format => new_format).exec.values_at(*self)
+    genes = Translation.job(:tsv_translate, "", :organism => organism, :genes => self, :format => new_format).exec.chunked_values_at(self)
     Gene.setup(genes, new_format, organism)
     genes.extend AnnotatedArray if AnnotatedArray === self
     genes
@@ -108,7 +108,7 @@ module Gene
   end
 
   property :biotype => :array2single do
-    Organism.gene_biotype(organism).tsv(:persist => true, :type => :single, :unnamed => true).values_at *self.ensembl
+    Organism.gene_biotype(organism).tsv(:persist => true, :type => :single, :unnamed => true).chunked_values_at self.ensembl
   end
   persist :biotype
 
@@ -126,18 +126,18 @@ module Gene
   end
 
   property :chr_start => :array2single do
-    Organism.gene_positions(organism).tsv(:persist => true, :type => :single, :cast => :to_i, :fields => ["Gene Start"], :unnamed => true).values_at *self
+    Organism.gene_positions(organism).tsv(:persist => true, :type => :single, :cast => :to_i, :fields => ["Gene Start"], :unnamed => true).chunked_values_at self
   end
   persist :chr_start
 
   property :go_bp_terms => :array2single do
-    Organism.gene_go_bp(organism).tsv(:persist => true, :key_field => "Ensembl Gene ID", :fields => ["GO ID"], :type => :flat, :unnamed => true).values_at *self.ensembl
+    Organism.gene_go_bp(organism).tsv(:persist => true, :key_field => "Ensembl Gene ID", :fields => ["GO ID"], :type => :flat, :unnamed => true).chunked_values_at self.ensembl
   end
   persist :go_bp_terms
 
   property :long_name => :array2single do
     entre = self.entrez
-    gene = Entrez.get_gene(entrez).values_at(*entrez).collect{|gene| gene.nil? ? nil : (gene.description || []).flatten.first}
+    gene = Entrez.get_gene(entrez).chunked_values_at(entrez).collect{|gene| gene.nil? ? nil : (gene.description || []).flatten.first}
   end
   persist :long_name
 
@@ -164,7 +164,7 @@ module Gene
     }
 
     res = transcripts.collect{|list|
-      Protein.setup(transcript2protein.values_at(*list).compact.uniq, "Ensembl Protein ID", organism)
+      Protein.setup(transcript2protein.chunked_values_at(list).compact.uniq, "Ensembl Protein ID", organism)
     }
 
     Protein.setup(res, "Ensembl Protein ID", organism)
@@ -180,7 +180,7 @@ module Gene
     proteins = self.proteins
     all_proteins = Protein.setup(proteins.flatten, "Ensembl Protein ID", organism)
     lengths = Misc.process_to_hash(all_proteins){|list| list.sequence_length}
-    proteins.collect{|list| lengths.values_at(*list).compact.max}
+    proteins.collect{|list| lengths.chunked_values_at(list).compact.max}
   end
   persist :max_protein_length
 
@@ -207,14 +207,14 @@ module Gene
   persist :chr_range
 
   property :articles => :array2single do
-    PMID.setup(Organism.gene_pmids(organism).tsv(:persist => true, :fields => ["PMID"], :type => :flat, :unnamed => true).values_at *self.entrez)
+    PMID.setup(Organism.gene_pmids(organism).tsv(:persist => true, :fields => ["PMID"], :type => :flat, :unnamed => true).chunked_values_at self.entrez)
   end
   persist :articles
 
   property :sequence => :array2single do
     @@sequence_tsv ||= {}
     @@sequence_tsv[organism] ||= Organism.gene_sequence(organism).tsv :persist => true, :unnamed => true
-    @@sequence_tsv[organism].values_at *self.ensembl
+    @@sequence_tsv[organism].chunked_values_at self.ensembl
   end
   persist :sequence
 
@@ -232,15 +232,15 @@ module Gene
     chemical_pos = @@matador.identify_field "Chemical"
 
     p2ds = Misc.process_to_hash(all_proteins){|proteins| 
-      @@matador.values_at(*proteins).collect{|values| 
+      @@matador.chunked_values_at(proteins).collect{|values| 
         next if values.nil?
         values[chemical_pos]
       }
     }
 
     res = transcripts.collect do |ts|
-      ps = t2ps.values_at(*ts).compact.flatten
-      p2ds.values_at(*ps).flatten.compact.uniq
+      ps = t2ps.chunked_values_at(ts).compact.flatten
+      p2ds.chunked_values_at(ps).flatten.compact.uniq
     end
 
     res
@@ -270,7 +270,7 @@ module Gene
   persist :pathway_drugs
 
   property :related_cancers => :array2single do
-    Cancer["cancer_genes.tsv"].tsv(:persist => true, :type => :list).values_at(*self.name).collect{|v| v.nil? ? nil : (v["Tumour Types (Somatic Mutations)"].split(", ") + v["Tumour Types (Germline Mutations)"].split(", ")).uniq}
+    Cancer["cancer_genes.tsv"].tsv(:persist => true, :type => :list).chunked_values_at(self.name).collect{|v| v.nil? ? nil : (v["Tumour Types (Somatic Mutations)"].split(", ") + v["Tumour Types (Germline Mutations)"].split(", ")).uniq}
   end
   persist :related_cancers
 
@@ -283,7 +283,7 @@ module Gene
       next if range.nil?
       [chromosome, range.begin, range.end] * ":"
     end
-    Sequence.job(:somatic_snvs_at_genomic_ranges, File.join("Gene", (names.compact.sort * ", ")[0..80]), :organism => clean_organism, :ranges  => ranges).fork.join.load.values_at *ranges
+    Sequence.job(:somatic_snvs_at_genomic_ranges, File.join("Gene", (names.compact.sort * ", ")[0..80]), :organism => clean_organism, :ranges  => ranges).fork.join.load.chunked_values_at ranges
   end
   persist :somatic_snvs
 
