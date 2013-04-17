@@ -129,7 +129,11 @@ module GenomicMutation
   end
 
   property :ensembl_browser => :single2array do
-    "http://#{Misc.ensembl_server(self.organism)}/Homo_sapiens/Location/View?db=core&r=#{chromosome}:#{position - 100}-#{position + 100}"
+    "http://#{Misc.ensembl_server(self.organism)}/#{Organism.scientific_name(organism).sub(" ", "_")}/Location/View?db=core&r=#{chromosome}:#{position - 100}-#{position + 100}"
+  end
+
+  property :ucsc_browser => :single2array do
+    "http://genome.ucsc.edu/cgi-bin/hgTracks?db=#{Organism.hg_build(organism)}&position=chr#{chromosome}:#{position - 100}-#{position + 100}"
   end
 
   property :chromosome => :array2single do
@@ -246,7 +250,7 @@ module GenomicMutation
 
     non_synonymous_mutated_isoforms = MutatedIsoform.setup(_mutated_isoforms.compact.flatten.uniq, organism).reject{|mi| mi.consequence == "SYNONYMOUS" or mi.consequence == "UTR"}
 
-    mi_gene = Misc.process_to_hash(non_synonymous_mutated_isoforms){|mis| mis.protein.gene}
+    mi_gene = Misc.process_to_hash(non_synonymous_mutated_isoforms){|mis| mis.protein.gene.clean_annotations}
 
     _mutated_isoforms = _mutated_isoforms.clean_annotations if _mutated_isoforms.respond_to? :clean_annotations
 

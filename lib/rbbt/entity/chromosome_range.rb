@@ -40,9 +40,14 @@ module ChromosomeRange
   end
 
   property :ensembl_browser => :single2array do
-    "http://#{Misc.ensembl_server(self.organism)}/Homo_sapiens/Location/View?db=core&r=#{chromosome}:#{start}-#{eend}"
+    "http://#{Misc.ensembl_server(self.organism)}/#{Organism.scientific_name(organism).sub(" ", "_")}/Location/View?db=core&r=#{chromosome}:#{start}-#{eend}"
   end
- 
+
+  property :ucsc_browser => :single2array do
+    "http://genome.ucsc.edu/cgi-bin/hgTracks?db=#{Organism.hg_build(organism)}&position=chr#{chromosome}:#{start}-#{eend}"
+  end
+
+
   property :chromosome => :array2single do
     self.clean_annotations.collect{|r| r.split(":")[0]}
   end
