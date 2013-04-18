@@ -40,6 +40,11 @@ module CNV
     self.clean_annotations.collect{|mut| mut.split(":")[1].to_i}
   end
 
+  property :begin => :array2single do
+    self.start
+  end
+
+
   property :end => :array2single do
     self.clean_annotations.collect{|mut| mut.split(":")[2].to_i}
   end
