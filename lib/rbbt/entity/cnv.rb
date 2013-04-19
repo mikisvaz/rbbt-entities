@@ -44,7 +44,6 @@ module CNV
     self.start
   end
 
-
   property :end => :array2single do
     self.clean_annotations.collect{|mut| mut.split(":")[2].to_i}
   end

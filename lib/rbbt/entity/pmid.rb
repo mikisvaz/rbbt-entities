@@ -51,16 +51,18 @@ module PMID
   property :_get_text => :array2single do |*args|
     type = args.first || default_type
 
-    case type.to_s
-    when "full_text", 'fulltext'
-      article.collect{|a| a.nil? ? nil : a.full_text}
-    when "abstract"
-      article.collect{|a| a.nil? ? nil : a.abstract }
-    when "best"
-      article.collect{|a| a.nil? ? nil : (a.full_text || a.text) }
-    else
-      article.collect{|a| a.nil? ? nil : a.text}
-    end
+    text = case type.to_s
+           when "full_text", 'fulltext'
+             article.collect{|a| a.nil? ? nil : a.full_text}
+           when "abstract"
+             article.collect{|a| a.nil? ? nil : a.abstract }
+           when "best"
+             article.collect{|a| a.nil? ? nil : (a.full_text || a.text) }
+           else
+             article.collect{|a| a.nil? ? nil : a.text}
+           end
+
+    text
   end
 
   property :pubmed_url => :single2array do
