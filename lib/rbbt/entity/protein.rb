@@ -65,6 +65,17 @@ module Protein
     to!(new_format).collect!{|v| v.nil? ? nil : v.first}
   end
 
+  property :ortholog => :array2single do |other|
+    return self if organism =~ /^#{ other }(?!\w)/
+    self.zip(self.gene.ortholog(other)).collect do |this_protein,other_gene|
+      next if other_gene.nil? or other_gene.empty?
+      this_protein_length = this_protein.sequence.length
+      proteins = Gene.setup(other_gene, "Ensembl Gene ID", other).proteins.flatten.reject{|p| p.sequence.nil?}
+      best = proteins.sort_by{|other_protein| (other_protein.sequence.length - this_protein_length).abs }.first
+      best
+    end
+  end
+
   property :gene => :array do
     Gene.setup(to("Ensembl Protein ID").clean_annotations.collect{|e| e.nil? ? e : e.dup}, "Ensembl Protein ID", organism).ensembl
   end

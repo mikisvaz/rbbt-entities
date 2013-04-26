@@ -9,18 +9,22 @@ rbbt-entities=/$PWD filter="*.rb *.rake Rakefile *.rdoc *.R *.sh *.js *.haml *.s
   rbbt=rbbt{
    entity.rb
    entity=entity{
-    cnv.rb
-    gene.rb
-    snp.rb
-    genomic_mutation.rb
     genotype.rb
-    misc.rb
-    mutated_isoform.rb
-    pmid.rb
-    protein.rb
+
+    genomic_mutation.rb
+    snp.rb
+
     chromosome_range.rb
+    cnv.rb
+    methylation.rb
+
+    gene.rb
     transcript.rb
+    protein.rb
+    mutated_isoform.rb
     interactor.rb
+
+    pmid.rb
    }
   }
  }

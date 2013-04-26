@@ -35,6 +35,7 @@ module Gene
 
   def self.gene_list_bases(genes)
     genes = genes.ensembl
+    genes = genes.annotate([genes]) unless Array === genes
     chromosome_genes = {}
     Misc.process_to_hash(genes){|genes| genes.chromosome }.each{|gene, chr| chromosome_genes[chr] ||= []; chromosome_genes[chr] << gene}
     total = 0
@@ -79,7 +80,7 @@ module Gene
 
   property :ortholog => :array2single do |other|
     return self if organism =~ /^#{ other }(?!\w)/
-    new_organism = organism.split(":")
+    new_organism = organism.split("/")
     new_organism[0] = other
     new_organism = new_organism * "/"
     Gene.setup(Organism[organism]["ortholog_#{other}"].tsv(:persist => true, :unnamed => true).chunked_values_at(self.ensembl).collect{|l| l.first}, "Ensembl Gene ID", new_organism)
