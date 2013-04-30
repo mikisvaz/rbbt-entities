@@ -165,7 +165,7 @@ module Gene
     }
 
     res = transcripts.collect{|list|
-      Protein.setup(transcript2protein.chunked_values_at(list).compact.uniq, "Ensembl Protein ID", organism)
+      Protein.setup(transcript2protein.chunked_values_at(list || []).compact.uniq, "Ensembl Protein ID", organism)
     }
 
     Protein.setup(res, "Ensembl Protein ID", organism)
