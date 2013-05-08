@@ -9,7 +9,6 @@ require 'rbbt/sources/InterPro'
 require 'rbbt/entity/gene'
 require 'nokogiri'
 
-Workflow.require_workflow 'structure'
 Workflow.require_workflow 'MutEval'
 
 module MutatedIsoform
@@ -332,11 +331,5 @@ module MutatedIsoform
     UniProt.pdbs_covering_aa_position(uniprot, self.position)
   end
 
-  property :pdbs_and_positions => :single do
-    return [] if pdbs.nil?
-    pdbs.collect do |pdb, info|
-      [pdb, Structure.job(:sequence_position_in_pdb, "Protein: #{ self }", :sequence => protein.sequence, :organism => organism, :position => position, :pdb => pdb).run]
-    end
-  end
 end
 
