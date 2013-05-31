@@ -116,6 +116,7 @@ module Entity
 
       def self.persist(method_name, type = nil, options = {})
         type = :memory if type.nil?
+        options ||= {}
         options = Misc.add_defaults options, :dir => Entity.entity_property_cache
 
         orig_name = UNPERSISTED_PREFIX + method_name.to_s

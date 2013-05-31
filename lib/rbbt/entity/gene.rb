@@ -85,7 +85,6 @@ module Gene
     new_organism = new_organism * "/"
     Gene.setup(Organism[organism]["ortholog_#{other}"].tsv(:persist => true, :unnamed => true).chunked_values_at(self.ensembl).collect{|l| l.first}, "Ensembl Gene ID", new_organism)
   end
-  persist :ortholog 
 
   property :to => :array2single do |new_format|
     return self if format == new_format
@@ -102,7 +101,6 @@ module Gene
       @@strand_tsv[organism][gene]
     end
   end
-  persist :_ary_strand
 
   property :ensembl => :array2single do
     to "Ensembl Gene ID"
@@ -111,7 +109,6 @@ module Gene
   property :biotype => :array2single do
     Organism.gene_biotype(organism).tsv(:persist => true, :type => :single, :unnamed => true).chunked_values_at self.ensembl
   end
-  persist :biotype
 
   property :entrez => :array2single do
     to "Entrez Gene ID"
@@ -129,31 +126,26 @@ module Gene
   property :chr_start => :array2single do
     Organism.gene_positions(organism).tsv(:persist => true, :type => :single, :cast => :to_i, :fields => ["Gene Start"], :unnamed => true).chunked_values_at self
   end
-  persist :chr_start
 
   property :go_bp_terms => :array2single do
     Organism.gene_go_bp(organism).tsv(:persist => true, :key_field => "Ensembl Gene ID", :fields => ["GO ID"], :type => :flat, :unnamed => true).chunked_values_at self.ensembl
   end
-  persist :go_bp_terms
 
   property :long_name => :array2single do
     entre = self.entrez
     gene = Entrez.get_gene(entrez).chunked_values_at(entrez).collect{|gene| gene.nil? ? nil : (gene.description || []).flatten.first}
   end
-  persist :long_name
 
   property :description => :single2array do
     gene = Entrez.get_gene(to("Entrez Gene ID"))
     gene.nil? ? nil : gene.summary.flatten.first
   end
-  persist :description
 
   property :transcripts => :array2single do
     res = Gene.ensg2enst(organism, self.ensembl)
     Transcript.setup(res, "Ensembl Transcript ID", organism)
     res
   end
-  persist :transcripts
 
   property :proteins  => :array2single do
     transcripts = Gene.ensg2enst(organism, self.ensembl)
@@ -170,12 +162,10 @@ module Gene
 
     Protein.setup(res, "Ensembl Protein ID", organism)
   end
-  persist :proteins
 
   property :max_transcript_length => :array2single do
     transcripts.collect{|list| list.sequence_length.compact.max}
   end
-  persist :max_transcript_length
 
   property :max_protein_length => :array2single do
     proteins = self.proteins
@@ -183,7 +173,6 @@ module Gene
     lengths = Misc.process_to_hash(all_proteins){|list| list.sequence_length}
     proteins.collect{|list| lengths.chunked_values_at(list).compact.max}
   end
-  persist :max_protein_length
 
   property :chromosome => :array2single do
     @@chromosome_tsv ||= {}
@@ -196,7 +185,6 @@ module Gene
       @@chromosome_tsv[organism][to("Ensembl Gene ID")]
     end
   end
-  persist :chromosome
 
   property :chr_range => :array2single do
     chr_range_index ||= Organism.gene_positions(organism).tsv :fields => ["Gene Start", "Gene End"], :type => :list, :persist => true, :cast => :to_i, :unnamed => true
@@ -205,19 +193,16 @@ module Gene
       Range.new *chr_range_index[gene]
     end
   end
-  persist :chr_range
 
   property :articles => :array2single do
     PMID.setup(Organism.gene_pmids(organism).tsv(:persist => true, :fields => ["PMID"], :type => :flat, :unnamed => true).chunked_values_at self.entrez)
   end
-  persist :articles
 
   property :sequence => :array2single do
     @@sequence_tsv ||= {}
     @@sequence_tsv[organism] ||= Organism.gene_sequence(organism).tsv :persist => true, :unnamed => true
     @@sequence_tsv[organism].chunked_values_at self.ensembl
   end
-  persist :sequence
 
   property :matador_drugs => :array2single do
     @@matador ||= Matador.protein_drug.tsv(:persist => false, :unnamed => true)
@@ -246,12 +231,10 @@ module Gene
 
     res
   end
-  persist :matador_drugs
 
   property :drugs => :array2single do
     @matador_drugs = matador_drugs
   end
-  persist :drugs
 
   property :kegg_pathway_drugs => :array2single do
     self.collect{|gene|
@@ -263,17 +246,14 @@ module Gene
       pathway_genes.compact.drugs.compact.flatten.uniq
     }
   end
-  persist :kegg_pathway_drugs
 
   property :pathway_drugs => :array2single do
     kegg_pathway_drugs
   end
-  persist :pathway_drugs
 
   property :related_cancers => :array2single do
     Cancer["cancer_genes.tsv"].tsv(:persist => true, :type => :list).chunked_values_at(self.name).collect{|v| v.nil? ? nil : (v["Tumour Types (Somatic Mutations)"].split(", ") + v["Tumour Types (Germline Mutations)"].split(", ")).uniq}
   end
-  persist :related_cancers
 
   property :somatic_snvs => :array2single do
     names = self.name
@@ -286,7 +266,6 @@ module Gene
     end
     Sequence.job(:somatic_snvs_at_genomic_ranges, File.join("Gene", (names.compact.sort * ", ")[0..80]), :organism => clean_organism, :ranges  => ranges).fork.join.load.chunked_values_at ranges
   end
-  persist :somatic_snvs
 
 
   property :literature_score do |terms|
@@ -298,7 +277,6 @@ module Gene
       articles.inject(0){|acc,article| acc += article.text.words.select{|word| terms.include? word}.length }.to_f / articles.length
     end
   end
-  persist :literature_score
 
 
   property :ihop_interactions => :single do
