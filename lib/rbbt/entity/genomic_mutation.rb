@@ -202,6 +202,8 @@ module GenomicMutation
     self.base.zip(reference).collect do |base,reference|
 
       type = case
+             when base.index(',')
+               "multiple"
              when base == reference
                "none"
              when (base.nil? or reference.nil? or base == "?" or reference == "?")
