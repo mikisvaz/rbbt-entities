@@ -202,12 +202,12 @@ module GenomicMutation
     self.base.zip(reference).collect do |base,reference|
 
       type = case
+             when (base.nil? or reference.nil? or base == "?" or reference == "?")
+               "unknown"
              when base.index(',')
                "multiple"
              when base == reference
                "none"
-             when (base.nil? or reference.nil? or base == "?" or reference == "?")
-               "unknown"
              when (base.length > 1 or base == '-')
                "indel"
              when (not %w(A G T C).include? base and not %w(A G T C).include? reference) 
