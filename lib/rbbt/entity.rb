@@ -3,11 +3,10 @@ require 'rbbt/annotations'
 module Entity 
 
   class << self
-    attr_accessor :formats, :entity_property_cache, :entity_list_cache
+    attr_accessor :formats, :entity_property_cache
   end
 
   self.entity_property_cache = "var/entity_property"
-  self.entity_list_cache     = "var/entity_list"
   self.formats = {}
   
   UNPERSISTED_PREFIX = "entity_unpersisted_property_"
