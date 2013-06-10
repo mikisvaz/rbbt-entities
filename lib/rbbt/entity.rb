@@ -40,6 +40,7 @@ module Entity
         self.clean_annotations.dup.to_yaml(*args)
       end
 
+
       def encode_with(coder)
         coder.scalar = clean_annotations
       end
@@ -159,4 +160,3 @@ module Entity
     end 
   end
 end
-

@@ -192,7 +192,7 @@ module GenomicMutation
   end
 
   property :reference => :array2single do
-    tsv = Sequence.job(:reference_allele_at_genomic_positions, jobname, :positions => self.clean_annotations, :organism => organism, :unnamed => true).run
+    tsv = Sequence.reference_allele_at_genomic_positions(organism, self.clean_annotations)
     tsv.chunked_values_at self
   end
 
@@ -310,7 +310,7 @@ module GenomicMutation
   end
 
   property :exon_junctions => :array do
-    Sequence.job(:exon_junctions_at_genomic_positions, jobname, :organism => organism, :positions => self.clean_annotations).run.chunked_values_at(self)
+    Sequence.job(:exon_junctions_at_genomic_positions, jobname, :organism => organism, :positions => self.clean_annotations).exec.chunked_values_at(self)
   end
 
   property :over_range? => :array2single do |range_chr,range|
