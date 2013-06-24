@@ -138,7 +138,7 @@ module Gene
 
   property :description => :single2array do
     gene = Entrez.get_gene(to("Entrez Gene ID"))
-    gene.nil? ? nil : gene.summary.flatten.first
+    gene.nil? ? nil : (gene.summary || [nil]).flatten.first
   end
 
   property :transcripts => :array2single do
