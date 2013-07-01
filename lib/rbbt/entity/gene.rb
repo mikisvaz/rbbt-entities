@@ -187,10 +187,10 @@ module Gene
   end
 
   property :chr_range => :array2single do
-    chr_range_index ||= Organism.gene_positions(organism).tsv :fields => ["Gene Start", "Gene End"], :type => :list, :persist => true, :cast => :to_i, :unnamed => true
+    @@chr_range_index ||= Organism.gene_positions(organism).tsv :fields => ["Gene Start", "Gene End"], :type => :list, :persist => true, :cast => :to_i, :unnamed => true
     to("Ensembl Gene ID").collect do |gene|
-      next if not chr_range_index.include? gene
-      Range.new *chr_range_index[gene]
+      next if not @@chr_range_index.include? gene
+      Range.new *@@chr_range_index[gene]
     end
   end
 
