@@ -5,8 +5,8 @@ begin
   require 'jeweler'
   Jeweler::Tasks.new do |gem|
     gem.name = "rbbt-entities"
-    gem.summary = %Q{Entities for the Ruby Bioinformatics Toolkit (rbbt)}
-    gem.description = %Q{Entities for handling tsv files, caches, etc}
+    gem.summary = %Q{DEPRECATED. Entities for the Ruby Bioinformatics Toolkit (rbbt)}
+    gem.description = %Q{Entities for handling tsv files, caches, etc. The entity subsystem is now placed in rbbt-utils and the entities themselves defined elsewhere, mainly in the Genomics Workflow}
     gem.email = "miguel.vazquez@cnio.es"
     gem.homepage = "http://github.com/mikisvaz/rbbt-util"
     gem.authors = ["Miguel Vazquez"]
